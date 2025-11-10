@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-#pragma once
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "PluginParameters.h"
@@ -67,4 +59,20 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new SubSaverAudioProcessor();
+}
+
+
+void SubSaverAudioProcessor::getStateInformation(MemoryBlock& destData)
+{
+    auto state = parameters.copyState();
+    std::unique_ptr<XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
+}
+
+void SubSaverAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+{
+    std::unique_ptr<XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+    if (xmlState.get() != nullptr)
+        if (xmlState->hasTagName(parameters.state.getType()))
+            parameters.replaceState(ValueTree::fromXml(*xmlState));
 }

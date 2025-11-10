@@ -1,7 +1,6 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PluginParameters.h"
 
 //==============================================================================
 
@@ -10,10 +9,10 @@ class AbstractProcessor : public virtual juce::AudioProcessor,
 {
 public:
     //==============================================================================
-    AbstractProcessor()
-        : parameters(*this, nullptr) // Initialize `parameters` with required arguments
-    {
-    }
+    AbstractProcessor() = default;
+    //    : parameters(*this, nullptr) // Initialize `parameters` with required arguments
+    //{
+    //}
     virtual ~AbstractProcessor() override = default;
 
     //==============================================================================
@@ -97,24 +96,11 @@ public:
     {
     }
 
-    void getStateInformation(juce::MemoryBlock& destData) override {
-        auto state = parameters.copyState();
-        std::unique_ptr<XmlElement> xml(state.createXml());
-        copyXmlToBinary(*xml, destData);
+    virtual void getStateInformation(juce::MemoryBlock& destData) override = 0;
 
-    }
-
-    void setStateInformation(const void* data, int sizeInBytes) override {
-        std::unique_ptr<XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-        if (xmlState.get() != nullptr)
-            if (xmlState->hasTagName(parameters.state.getType()))
-                parameters.replaceState(ValueTree::fromXml(*xmlState));
-    }
+    virtual void setStateInformation(const void* data, int sizeInBytes) override = 0;
 
 
-protected:
-
-    AudioProcessorValueTreeState parameters;
 
 private:
 

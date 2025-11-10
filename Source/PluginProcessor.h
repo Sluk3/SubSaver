@@ -4,6 +4,7 @@
 #include "AbstractProcessor.h"
 #include "DryWet.h"
 #include "Saturators.h"
+#include "PluginParameters.h"
 //==============================================================================
 
 
@@ -27,12 +28,17 @@ public:
     };
 
     //==============================================================================
+    
+    void getStateInformation(MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
-    juce::AudioProcessorValueTreeState parameters; // FIX: usa la stessa inizializzazione del costruttore
     DryWet dryWetter;
     FoldbackSaturator foldback;
     void parameterChanged(const juce::String& parameterID, float newValue) override;
+
+    // Aggiungi questo membro dati privato per risolvere l'errore E0292
+    juce::AudioProcessorValueTreeState parameters;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SubSaverAudioProcessor)
 };
