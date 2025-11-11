@@ -5,6 +5,7 @@
 #include "DryWet.h"
 #include "Saturators.h"
 #include "PluginParameters.h"
+#include "EnvelopeFollower.h"
 //==============================================================================
 
 
@@ -36,10 +37,10 @@ private:
     DryWet dryWetter;
     FoldbackSaturator foldback;
     void parameterChanged(const juce::String& parameterID, float newValue) override;
-
-    // Aggiungi questo membro dati privato per risolvere l'errore E0292
+    EnvelopeFollower envelopeFollower;
+    ParameterModulation driveModulation;
     juce::AudioProcessorValueTreeState parameters;
-
+    juce::AudioBuffer<double> envelopeBuffer;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SubSaverAudioProcessor)
 };
 

@@ -7,7 +7,9 @@
 SubSaverAudioProcessor::SubSaverAudioProcessor()
     : AbstractProcessor(), parameters(*this, nullptr, "SUBSAVER", Parameters::createParameterLayout()),
     dryWetter(Parameters::defaultDryLevel, Parameters::defaultWetLevel, 0),
-    foldback(Parameters::defaultDrive)// <--- qui i valori di default
+    foldback(Parameters::defaultDrive,0.8f,Parameters::defaultStereoWidth),
+    envelopeFollower(),
+    driveModulation(Parameters::defaultDrive, Parameters::defaultEnvAmount)
 {
     Parameters::addListenerToAllParameters(parameters, this);
 }
@@ -20,6 +22,10 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 {
 	foldback.prepareToPlay(sampleRate);
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock);
+
+    envelopeFollower.prepareToPlay(sampleRate);
+    driveModulation.prepareToPlay(sampleRate);
+    envelopeBuffer.setSize(1, samplesPerBlock);
 }
 
 void SubSaverAudioProcessor::releaseResources()
@@ -31,8 +37,10 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 {
     juce::ScopedNoDenormals noDenormals; // Non dimenticare!
     dryWetter.copyDrySignal(buffer);
+    envelopeFollower.processBlock(buffer, envelopeBuffer);
+	driveModulation.processBlock(envelopeBuffer, buffer.getNumSamples());
 	//distorsione e tutte le cose belle sul buffer
-	foldback.processBlock(buffer);
+	foldback.processBlock(buffer, envelopeBuffer);
 	dryWetter.mergeDryAndWet(buffer);
 }
 
@@ -51,6 +59,10 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         dryWetter.setWetLevel(newValue);
 	else if (parameterID == Parameters::nameDrive)
 		foldback.setDrive(newValue);
+    else if (parameterID == Parameters::nameStereoWidth) 
+        foldback.setStereoWidth(newValue);  
+    else if (parameterID == Parameters::nameEnvAmount)
+        driveModulation.setModAmount(newValue);
 
 }
 
