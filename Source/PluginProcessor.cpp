@@ -8,8 +8,7 @@ SubSaverAudioProcessor::SubSaverAudioProcessor()
     : AbstractProcessor(), parameters(*this, nullptr, "SUBSAVER", Parameters::createParameterLayout()),
     dryWetter(Parameters::defaultDryLevel, Parameters::defaultWetLevel, 0),
     foldback(Parameters::defaultDrive,0.8f,Parameters::defaultStereoWidth),
-    envelopeFollower(),
-    driveModulation(Parameters::defaultDrive, Parameters::defaultEnvAmount)
+    envelopeFollower(Parameters::defaultEnvAmount)
 {
     Parameters::addListenerToAllParameters(parameters, this);
 }
@@ -24,8 +23,8 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock);
 
     envelopeFollower.prepareToPlay(sampleRate);
-    driveModulation.prepareToPlay(sampleRate);
     envelopeBuffer.setSize(1, samplesPerBlock);
+    modulatedDriveBuffer.setSize(1, samplesPerBlock);
 }
 
 void SubSaverAudioProcessor::releaseResources()
@@ -36,12 +35,25 @@ void SubSaverAudioProcessor::releaseResources()
 void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals; // Non dimenticare!
+
+    const int numSamples = buffer.getNumSamples();
+
+    // 1. Salva dry signal
     dryWetter.copyDrySignal(buffer);
+
+    // 2. Genera envelope dal segnale (0-1)
     envelopeFollower.processBlock(buffer, envelopeBuffer);
-	driveModulation.processBlock(envelopeBuffer, buffer.getNumSamples());
-	//distorsione e tutte le cose belle sul buffer
-	foldback.processBlock(buffer, envelopeBuffer);
-	dryWetter.mergeDryAndWet(buffer);
+
+    // 3. Copia envelope nel buffer di modulazione
+    modulatedDriveBuffer.makeCopyOf(envelopeBuffer, true);
+
+    // 4. Applica modulazione: drive × (1 + env × envAmount)
+
+    // 5. Applica distorsione con drive modulato
+    foldback.processBlock(buffer, modulatedDriveBuffer);
+
+    // 6. Mixa dry/wet
+    dryWetter.mergeDryAndWet(buffer);
 }
 
 //==============================================================================
@@ -57,13 +69,12 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         dryWetter.setDryLevel(newValue);
     else if (parameterID == Parameters::nameWetLevel)
         dryWetter.setWetLevel(newValue);
-	else if (parameterID == Parameters::nameDrive)
-		foldback.setDrive(newValue);
+    else if (parameterID == Parameters::nameDrive) 
+        foldback.setDrive(newValue);
     else if (parameterID == Parameters::nameStereoWidth) 
         foldback.setStereoWidth(newValue);  
     else if (parameterID == Parameters::nameEnvAmount)
-        driveModulation.setModAmount(newValue);
-
+        envelopeFollower.setModAmount(newValue);
 }
 
 

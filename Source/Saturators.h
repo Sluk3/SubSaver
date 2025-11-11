@@ -115,21 +115,21 @@ public:
     {
         stereoWidth.setTargetValue(width);
     }
-    // Procesing: apply foldback per canale with drive and threshold
-    void processBlock(juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<double>& modulatedDriveBuffer)
+    // Procesing: apply foldback per canale wsddith drive and threshold
+    void processBlock(juce::AudioBuffer<float>& buffer,
+        const juce::AudioBuffer<double>& envelopeBuffer)
     {
         const int numChannels = buffer.getNumChannels();
         const int numSamples = buffer.getNumSamples();
-
+		auto driveValue = 1.0f;
         auto bufferData = buffer.getArrayOfWritePointers();
-        auto modDriveData = modulatedDriveBuffer.getArrayOfReadPointers();
+        auto envData = envelopeBuffer.getReadPointer(0);
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
-
-            double modulatedDrive = modDriveData[0][sample];
+            float env = envData[sample]+1;
             float currentWidth = stereoWidth.getNextValue();
-
+			driveValue = drive.getNextValue();
             // Calcola i bias per L e R
             float biasL = currentWidth * (-0.5f);
             float biasR = currentWidth * (+0.5f);
@@ -139,12 +139,21 @@ public:
             {
                 float bias = (ch == 0) ? biasL : biasR;
 
-                // Applica: drive modulato + bias, poi foldback
-                float driven = bufferData[ch][sample] * modulatedDrive + bias;
+                // 1. input × drive
+                float driven = bufferData[ch][sample] * driveValue;
+
+                // 2. + bias
+                driven += bias;
+
+                // 3. × envelope_mod
+                driven *= env;
+
+                // 4. sin~ (o altra waveshaping function)
                 bufferData[ch][sample] = sineFold(driven, threshold);
             }
         }
     }
+
 
     static float sineFold(float x, float drive)
     {
