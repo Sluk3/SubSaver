@@ -101,6 +101,13 @@ public:
     {
         drive.reset(sampleRate, 0.03); // Smoothing attack/release veloce
         stereoWidth.reset(sampleRate, 0.03);
+        // Imposta DC blocker (highpass 5Hz, come hip~ 5 in PD)
+        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 10.0);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            dcBlocker[ch].coefficients = coeffs;
+            dcBlocker[ch].reset();
+        }
     }
 
     void setDrive(double value)
@@ -139,17 +146,23 @@ public:
             {
                 float bias = (ch == 0) ? biasL : biasR;
 
-                // 1. input × drive
+                // 1. input  drive
                 float driven = bufferData[ch][sample] * driveValue;
 
                 // 2. + bias
                 driven += bias;
 
-                // 3. × envelope_mod
+                // 3.  envelope_mod
                 driven *= env;
 
                 // 4. sin~ (o altra waveshaping function)
                 bufferData[ch][sample] = sineFold(driven, threshold);
+
+                // 5. DC block (equivalente a hip~ 5)
+                bufferData[ch][sample] = dcBlocker[ch].processSample(bufferData[ch][sample]);
+
+                // 6. Gain compensation (*~ 0.5)
+                bufferData[ch][sample] *= 0.5f;
             }
         }
     }
@@ -166,9 +179,25 @@ private:
     SmoothedValue<double, ValueSmoothingTypes::Linear> drive;
     SmoothedValue<double, ValueSmoothingTypes::Linear> stereoWidth;
     float threshold;
+    juce::dsp::IIR::Filter<float> dcBlocker[2];
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SineFoldSaturator);
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class TriFoldSaturator
 {
 public:
@@ -225,7 +254,7 @@ public:
             {
                 float bias = (ch == 0) ? biasL : biasR;
 
-                // Applica: drive modulato + bias, poi foldback
+                // Applica: drive dulato + bias, poi foldback
                 float driven = bufferData[ch][sample] * modulatedDrive + bias;
                 bufferData[ch][sample] = triangleWavefolder(driven, threshold);
             }

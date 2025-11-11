@@ -28,7 +28,7 @@ public:
         amount.setTargetValue(juce::jlimit(0.0f, 1.0f, amountValue));
     }
 
-    // Genera envelope buffer (gi‡ scalato per env_amount)
+    // Genera envelope buffer (gi√† scalato per env_amount)
     void processBlock(const juce::AudioBuffer<float>& inputBuffer, juce::AudioBuffer<double>& envelopeBuffer)
     {
         const int numChannels = inputBuffer.getNumChannels();

@@ -47,13 +47,13 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     // 3. Copia envelope nel buffer di modulazione
     modulatedDriveBuffer.makeCopyOf(envelopeBuffer, true);
 
-    // 4. Applica modulazione: drive × (1 + env × envAmount)
+    // 4. Applica modulazione: drive  (1 + env  envAmount)
 
-    // 5. Applica distorsione con drive modulato
-    foldback.processBlock(buffer, modulatedDriveBuffer);
+    // 5. Applica distorsione n drive modulato
+    fofoldback.processBlock(buffermodulatedDriveBuffer);
 
     // 6. Mixa dry/wet
-    dryWetter.mergeDryAndWet(buffer);
+    drdryWetter.mergeDryAndWet(buffer);
 }
 
 //==============================================================================
@@ -69,7 +69,7 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         dryWetter.setDryLevel(newValue);
     else if (parameterID == Parameters::nameWetLevel)
         dryWetter.setWetLevel(newValue);
-    else if (parameterID == Parameters::nameDrive) 
+  else if (parameterID == Parameters::nameDrive) 
         foldback.setDrive(newValue);
     else if (parameterID == Parameters::nameStereoWidth) 
         foldback.setStereoWidth(newValue);  
