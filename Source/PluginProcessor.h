@@ -35,7 +35,7 @@ public:
 
 private:
     DryWet dryWetter;
-    FoldbackSaturator foldback;
+    SineFoldSaturator foldback;
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     EnvelopeFollower envelopeFollower;
     ParameterModulation driveModulation;

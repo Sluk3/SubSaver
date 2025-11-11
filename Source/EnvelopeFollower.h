@@ -82,11 +82,6 @@ private:
 };
 
 
-// ParameterModulation.h - la tua classe, con piccola modifica per chiarezza
-#pragma once
-
-#include <JuceHeader.h>
-
 class ParameterModulation
 {
 public:
@@ -111,12 +106,12 @@ public:
         const auto numCh = buffer.getNumChannels();
         auto data = buffer.getArrayOfWritePointers();
 
-        // 1. Riscala modulazione tra 0 e 1 (se arriva tra -1 e +1)
-        for (int ch = 0; ch < numCh; ++ch)
-        {
-            juce::FloatVectorOperations::add(data[ch], 1.0, numSamples);
-            juce::FloatVectorOperations::multiply(data[ch], 0.5, numSamples); // Ora è 0-1
-        }
+        //// 1. Riscala modulazione tra 0 e 1 (se arriva tra -1 e +1)
+        //for (int ch = 0; ch < numCh; ++ch)
+        //{
+        //    juce::FloatVectorOperations::add(data[ch], 1.0, numSamples);
+        //    juce::FloatVectorOperations::multiply(data[ch], 0.5, numSamples); // Ora è 0-1
+        //}
 
         // 2. Moltiplica per modAmount
         for (int ch = 0; ch < numCh; ++ch)
