@@ -25,7 +25,8 @@ public:
     TiltFilter(float defaultTiltAmount = Parameters::defaultTilt, float defaultPivotFreq = 500.0f)
         : tiltAmount(defaultTiltAmount),
         pivotFrequency(defaultPivotFreq),
-        sampleRate(44100.0)
+        sampleRate(44100.0),
+        Q(0.707f)
     {
         tiltAmount.setCurrentAndTargetValue(defaultTiltAmount);
     }
@@ -33,7 +34,7 @@ public:
     void prepareToPlay(double sr, int maxBlockSize)
     {
         sampleRate = sr;
-        tiltAmount.reset(sr, 0.05); // Smooth parameter changes
+        tiltAmount.reset(sr, 0.005); // Smooth parameter changes
 
         // Inizializza i filtri per stereo (2 canali)
         juce::dsp::ProcessSpec spec;
@@ -49,7 +50,6 @@ public:
             highShelf[ch].reset();
         }
 
-        updateCoefficients();
     }
 
     void setTiltAmount(float tiltDB)
@@ -81,12 +81,9 @@ public:
         const int numChannels = buffer.getNumChannels();
         const int numSamples = buffer.getNumSamples();
 
-        // Aggiorna coefficienti se il parametro è cambiato
-        if (tiltAmount.isSmoothing())
-        {
-            updateCoefficients();
+        if (tiltAmount.isSmoothing()) {
+			updateCoefficients();
         }
-
         // Processa ogni canale indipendentemente
         for (int ch = 0; ch < juce::jmin(numChannels, 2); ++ch)
         {
@@ -118,8 +115,6 @@ private:
     {
         float currentTilt = tiltAmount.getNextValue();
 
-        // Q factor per transizione smooth
-        const float Q = 0.707f; // Butterworth response
 
         // Converti tilt amount in gain lineare
         float lowGain = juce::Decibels::decibelsToGain(currentTilt);
@@ -143,7 +138,7 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> tiltAmount;
     float pivotFrequency;
     double sampleRate;
-
+	float Q;
     // Filtri IIR per ogni canale (stereo)
     juce::dsp::IIR::Filter<float> lowShelf[2];
     juce::dsp::IIR::Filter<float> highShelf[2];
