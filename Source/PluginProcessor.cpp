@@ -8,7 +8,9 @@ SubSaverAudioProcessor::SubSaverAudioProcessor()
     : AbstractProcessor(), parameters(*this, nullptr, "SUBSAVER", Parameters::createParameterLayout()),
     dryWetter(Parameters::defaultDryLevel, Parameters::defaultWetLevel, 0),
     foldback(Parameters::defaultDrive,0.8f,Parameters::defaultStereoWidth),
-    envelopeFollower(Parameters::defaultEnvAmount)
+    envelopeFollower(Parameters::defaultEnvAmount),
+    tiltFilterPre(0.0f, 1000.0f),  
+    tiltFilterPost(0.0f, 1000.0f)  
 {
     Parameters::addListenerToAllParameters(parameters, this);
 }
@@ -21,7 +23,8 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 {
 	foldback.prepareToPlay(sampleRate);
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock);
-
+    tiltFilterPre.prepareToPlay(sampleRate, samplesPerBlock);
+    tiltFilterPost.prepareToPlay(sampleRate, samplesPerBlock);
     envelopeFollower.prepareToPlay(sampleRate);
     envelopeBuffer.setSize(1, samplesPerBlock);
     modulatedDriveBuffer.setSize(1, samplesPerBlock);
@@ -41,19 +44,21 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     // 1. Salva dry signal
     dryWetter.copyDrySignal(buffer);
 
+    // 2. TILT FILTER PRE (modifica contenuto armonico prima della distorsione)
+    tiltFilterPre.processBlock(buffer);
+
     // 2. Genera envelope dal segnale (0-1)
     envelopeFollower.processBlock(buffer, envelopeBuffer);
 
     // 3. Copia envelope nel buffer di modulazione
     modulatedDriveBuffer.makeCopyOf(envelopeBuffer, true);
 
-    // 4. Applica modulazione: drive  (1 + env  envAmount)
-
     // 5. Applica distorsione n drive modulato
-    fofoldback.processBlock(buffermodulatedDriveBuffer);
+    foldback.processBlock(buffer,modulatedDriveBuffer);
 
+    tiltFilterPost.processBlock(buffer);
     // 6. Mixa dry/wet
-    drdryWetter.mergeDryAndWet(buffer);
+    dryWetter.mergeDryAndWet(buffer);
 }
 
 //==============================================================================
@@ -75,6 +80,14 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         foldback.setStereoWidth(newValue);  
     else if (parameterID == Parameters::nameEnvAmount)
         envelopeFollower.setModAmount(newValue);
+    else if (parameterID == Parameters::nameTilt)
+    {
+        // Tilt PRE: usa il valore diretto
+        tiltFilterPre.setTiltAmount(newValue);
+
+        // Tilt POST: inverte il valore (compensa)
+        tiltFilterPost.setTiltAmount(-newValue);
+    }
 }
 
 

@@ -6,6 +6,7 @@
 #include "Saturators.h"
 #include "PluginParameters.h"
 #include "EnvelopeFollower.h"
+#include "Filters.h"
 //==============================================================================
 
 
@@ -39,6 +40,8 @@ private:
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     EnvelopeFollower envelopeFollower;
     juce::AudioProcessorValueTreeState parameters; 
+    TiltFilter tiltFilterPre;  
+    TiltFilter tiltFilterPost;  
     juce::AudioBuffer<double> envelopeBuffer;      // Envelope grezzo (0-1)
     juce::AudioBuffer<double> modulatedDriveBuffer; // Drive modulato
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SubSaverAudioProcessor)
