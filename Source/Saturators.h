@@ -113,7 +113,9 @@ public:
 
         resetOversampler(sampleRate);
 		originalSampleRate = sampleRate;
-        
+        if (oversampler)
+            oversampler->initProcessing(static_cast<size_t>(samplesPerBlock));
+    
     }
     void setOversampling(bool shouldOversample)
     {
@@ -141,14 +143,13 @@ public:
         const int numChannels = buffer.getNumChannels();
         const int numSamples = buffer.getNumSamples();
 		auto driveValue = 1.0f;
-        auto bufferData = buffer.getArrayOfWritePointers();
+        
         auto envData = envelopeBuffer.getReadPointer(0);
 		//OVERSAMPLING
-        juce::dsp::AudioBlock<float> block(buffer.getArrayOfWritePointers(),
-            numChannels,
-            0,
-            numSamples);
-        auto oversampledBlock = oversampler->processSamplesUp(block);
+        // Crea il context per l'oversampling
+        juce::dsp::AudioBlock<float> block(buffer);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        auto oversampledBlock = oversampler->processSamplesUp(context.getInputBlock());
         const size_t numOversampledChannels = oversampledBlock.getNumChannels();
         const size_t numOversampledSamples = oversampledBlock.getNumSamples();
         for (size_t sample = 0; sample < numOversampledSamples; ++sample)
@@ -174,13 +175,13 @@ public:
                 // 1. input  drive
 				float driven = dataPtr[sample] * driveValue;
 
-                // 3.  envelope_mod
-                driven *= env;
+                
 
                 // 2. + bias
                 driven += (ch == 0) ? biasL : biasR;
 
-                
+                // 3.  envelope_mod
+                driven *= env;
 
                 // 4. sin~ (o altra waveshaping function)
 				dataPtr[sample] = sineFold(driven);
@@ -188,7 +189,8 @@ public:
 
             }
         }
-        oversampler->processSamplesDown(block);
+        oversampler->processSamplesDown(context.getOutputBlock());
+        auto bufferData = buffer.getArrayOfWritePointers();
         // ═══════════════════════════════════════════════════════════
         // DC BLOCKER (a sample rate NATIVO dopo il downsampling)
         // ═══════════════════════════════════════════════════════════
