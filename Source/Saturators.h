@@ -110,12 +110,11 @@ public:
             dcBlocker[ch].coefficients = coeffs;
             dcBlocker[ch].reset();
         }
-
-        resetOversampler(sampleRate);
-		originalSampleRate = sampleRate;
-        if (oversampler)
-            oversampler->initProcessing(static_cast<size_t>(samplesPerBlock));
-    
+        maxSamplesPerBlock = samplesPerBlock;
+        originalSampleRate = sampleRate;
+        resetOversampler();
+		
+        
     }
     void setOversampling(bool shouldOversample)
     {
@@ -137,7 +136,7 @@ public:
     {
 		if (needsOversamplerReset)//check per resettare l'oversampler se necessario, lo facciamo ora per evitare di sentire click
         {
-            resetOversampler(originalSampleRate);
+            resetOversampler();
             needsOversamplerReset = false;
         }
         const int numChannels = buffer.getNumChannels();
@@ -219,7 +218,7 @@ public:
     }
 
 private:
-    void resetOversampler(double originalSampleRate)
+    void resetOversampler()
     {
         
             // Calcola il fattore di oversampling in base al sample rate target
@@ -232,6 +231,9 @@ private:
                 true, // massima qualità
                 true  // latenza intera
             );
+            if (oversampler)
+                oversampler->initProcessing(static_cast<size_t>(maxSamplesPerBlock));
+
         
     }
     SmoothedValue<double, ValueSmoothingTypes::Linear> drive;
@@ -241,6 +243,7 @@ private:
     bool needsOversamplerReset = false;
     double overSampledRate = 0;
 	double originalSampleRate = 0;
+    int maxSamplesPerBlock = 0;
     std::unique_ptr<dsp::Oversampling<float>> oversampler;
     int oversamplingFactor = 1;
     int latency = 0;
