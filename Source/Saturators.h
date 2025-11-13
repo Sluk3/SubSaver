@@ -1,7 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include <JuceHeader.h>
 #include "PluginParameters.h"
+
+#define TARGET_SAMPLING_RATE 192000.0
 class FoldbackSaturator
 {
 public:
@@ -87,17 +89,17 @@ class SineFoldSaturator
 {
 public:
     SineFoldSaturator(double defaultDrive = Parameters::defaultDrive,
-        float defaultThresh = 0.8f,
-        double defaultStereoWidth = Parameters::defaultStereoWidth)
+        double defaultStereoWidth = Parameters::defaultStereoWidth,
+        bool defaultOversampling = Parameters::defaultOversampling)
         : drive(defaultDrive),
-        threshold(defaultThresh),
-        stereoWidth(defaultStereoWidth)
+        stereoWidth(defaultStereoWidth),
+        oversampling(defaultOversampling)
     {
         drive.setCurrentAndTargetValue(defaultDrive);
         stereoWidth.setCurrentAndTargetValue(defaultStereoWidth);
     }
 
-    void prepareToPlay(double sampleRate)
+    void prepareToPlay(double sampleRate, int samplesPerBlock, int numCh)
     {
         drive.reset(sampleRate, 0.03); // Smoothing attack/release veloce
         stereoWidth.reset(sampleRate, 0.03);
@@ -108,33 +110,56 @@ public:
             dcBlocker[ch].coefficients = coeffs;
             dcBlocker[ch].reset();
         }
-    }
 
+        resetOversampler();
+        
+    }
+    void setOversampling(bool shouldOversample)
+    {
+        if (oversampling == shouldOversample)
+            return; // Nessun cambiamento
+		oversampling = shouldOversample;
+        needsOversamplerReset = true; // Flag per resettare al prossimo processBlock
+    }
     void setDrive(double value)
     {
         drive.setTargetValue(value);
-    }
-    void setThreshold(float thresh)
-    {
-        threshold = thresh;
     }
     void setStereoWidth(float width)
     {
         stereoWidth.setTargetValue(width);
     }
     // Procesing: apply foldback per canale wsddith drive and threshold
-    void processBlock(juce::AudioBuffer<float>& buffer,
-        const juce::AudioBuffer<double>& envelopeBuffer)
+    void processBlock(juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<double>& envelopeBuffer)
     {
+		if (needsOversamplerReset)//check per resettare l'oversampler se necessario, lo facciamo ora per evitare di sentire click
+        {
+            resetOversampler();
+            needsOversamplerReset = false;
+        }
         const int numChannels = buffer.getNumChannels();
         const int numSamples = buffer.getNumSamples();
 		auto driveValue = 1.0f;
         auto bufferData = buffer.getArrayOfWritePointers();
         auto envData = envelopeBuffer.getReadPointer(0);
-
-        for (int sample = 0; sample < numSamples; ++sample)
+		//OVERSAMPLING
+        juce::dsp::AudioBlock<float> block(buffer.getArrayOfWritePointers(),
+            numChannels,
+            0,
+            numSamples);
+        auto oversampledBlock = oversampler->processSamplesUp(block);
+        const size_t numOversampledChannels = oversampledBlock.getNumChannels();
+        const size_t numOversampledSamples = oversampledBlock.getNumSamples();
+        
+        for (size_t sample = 0; sample < numOversampledSamples; ++sample)
         {
-            float env = envData[sample]+1;
+            size_t nativeIndex = sample / oversamplingFactor;            // Calcola l'indice del campione corrispondente nel buffer a frequenza nativa.
+            if (nativeIndex >= envelopeBuffer.getNumSamples())           // Controlla se l'indice nativo calcolato supera i limiti del buffer dell'inviluppo.
+                nativeIndex = envelopeBuffer.getNumSamples() - 1;        // Se fuori limite, imposta l'indice all'ultimo campione valido.
+
+            float env = envelopeBuffer.getSample(0, nativeIndex);        // Recupera il valore dell'inviluppo dal canale 0 all'indice nativo corretto。
+
+
             float currentWidth = stereoWidth.getNextValue();
 			driveValue = drive.getNextValue();
             // Calcola i bias per L e R
@@ -142,7 +167,7 @@ public:
             float biasR = currentWidth * (+0.5f);
 
             // Processa ogni canale
-            for (int ch = 0; ch < numChannels; ++ch)
+            for (size_t ch = 0; ch < numOversampledChannels; ++ch)
             {
                 float bias = (ch == 0) ? biasL : biasR;
 
@@ -156,31 +181,71 @@ public:
                 driven *= env;
 
                 // 4. sin~ (o altra waveshaping function)
-                bufferData[ch][sample] = sineFold(driven, threshold);
+                bufferData[ch][sample] = sineFold(driven);
 
-                // 5. DC block (equivalente a hip~ 5)
-                bufferData[ch][sample] = dcBlocker[ch].processSample(bufferData[ch][sample]);
 
+            }
+        }
+        oversampler->processSamplesDown(block);
+        // ═══════════════════════════════════════════════════════════
+        // DC BLOCKER (a sample rate NATIVO dopo il downsampling)
+        // ═══════════════════════════════════════════════════════════
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* channelData = buffer.getWritePointer(ch);
+            for (int i = 0; i < numSamples; ++i) {
+                channelData[i] = dcBlocker[ch].processSample(channelData[i]);
                 // 6. Gain compensation (*~ 0.5)
-                bufferData[ch][sample] *= 0.5f;
+                bufferData[ch][i] *= 0.5f;
             }
         }
     }
 
 
-    static float sineFold(float x, float drive)
+    static float sineFold(float x)
     {
         // Modula il segnale con una funzione sinusoidale
         // drive controlla quante volte il segnale viene "piegato"
-        return std::sin(juce::MathConstants<float>::twoPi * x * drive);
+        return std::sin(juce::MathConstants<float>::twoPi * x );
+    }
+    int getLatencySamples() const noexcept
+    {
+        if (oversampler)
+            return static_cast<int>(oversampler->getLatencyInSamples());
+        return 0;
     }
 
 private:
+    void resetOversampler()
+    {
+        if (oversampling)
+        {
+            // Calcola il fattore di oversampling in base al sample rate target
+            oversamplingFactor = static_cast<int>(TARGET_SAMPLING_RATE / (drive.getCurrentValue() > 0 ? drive.getCurrentValue() : 1.0));
+            oversamplingFactor = juce::jmin(4, juce::jmax(1, oversamplingFactor)); // Limita il fattore tra 1 e 4
+            oversampler = std::make_unique<dsp::Oversampling<float>>(
+                2, // numero di canali
+                static_cast<size_t>(std::log2(oversamplingFactor)), // fattore di oversampling come potenza di 2
+                dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR,
+                true, // massima qualità
+                true  // latenza intera
+            );
+        }
+        else
+        {
+            oversamplingFactor = 1;
+            oversampler.reset();
+        }
+    }
     SmoothedValue<double, ValueSmoothingTypes::Linear> drive;
     SmoothedValue<double, ValueSmoothingTypes::Linear> stereoWidth;
-    float threshold;
     juce::dsp::IIR::Filter<float> dcBlocker[2];
-
+    bool oversampling;
+    bool needsOversamplerReset = false;
+    double overSampledRate = 0;
+    std::unique_ptr<dsp::Oversampling<float>> oversampler;
+    int oversamplingFactor = 1;
+    int latency = 0;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SineFoldSaturator);
 };
 

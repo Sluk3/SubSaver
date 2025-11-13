@@ -35,7 +35,8 @@ public:
     {
         sampleRate = sr;
         tiltAmount.reset(sr, 0.005); // Smooth parameter changes
-
+        tiltAmount.setCurrentAndTargetValue(Parameters::defaultTilt);
+		lastTiltAmount = tiltAmount.getCurrentValue();
         // Inizializza i filtri per stereo (2 canali)
         juce::dsp::ProcessSpec spec;
         spec.sampleRate = sr;
@@ -55,6 +56,7 @@ public:
     void setTiltAmount(float tiltDB)
     {
         tiltAmount.setTargetValue(juce::jlimit(-12.0f, 12.0f, tiltDB));
+
     }
 
     void setPivotFrequency(float freqHz)
@@ -76,27 +78,35 @@ public:
      * Process a stereo audio buffer
      * Buffer deve avere 2 canali (L/R)
      */
-    void processBlock(juce::AudioBuffer<float>& buffer)
+    void processBlock(juce::AudioBuffer<float>& buffer, int numSamples)
     {
         const int numChannels = buffer.getNumChannels();
-        const int numSamples = buffer.getNumSamples();
 
-        if (tiltAmount.isSmoothing()) {
-			updateCoefficients();
-        }
-        // Processa ogni canale indipendentemente
-        for (int ch = 0; ch < juce::jmin(numChannels, 2); ++ch)
+        for (int i = 0; i < numSamples; ++i)
         {
-            auto* channelData = buffer.getWritePointer(ch);
+            // Ottieni il prossimo valore smoothato
+            float currentTilt = tiltAmount.getNextValue();
 
-            // Applica Low Shelf
-            juce::dsp::AudioBlock<float> block(&channelData, 1, numSamples);
-            juce::dsp::ProcessContextReplacing<float> contextLow(block);
-            lowShelf[ch].process(contextLow);
+            // Aggiorna i coefficienti solo se c'è un cambiamento significativo
+            if (std::abs(currentTilt - lastTiltAmount) > 0.001f)
+            {
+                tiltAmount = currentTilt;
+                updateCoefficients();
+                lastTiltAmount = currentTilt;
+            }
 
-            // Applica High Shelf
-            juce::dsp::ProcessContextReplacing<float> contextHigh(block);
-            highShelf[ch].process(contextHigh);
+            // Processa ciascun canale per questo campione
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                float* channelData = buffer.getWritePointer(ch);
+                float sample = channelData[i];
+
+                // Applica low shelf e high shelf
+                sample = lowShelf[ch].processSample(sample);
+                sample = highShelf[ch].processSample(sample);
+                sample *= (1 - std::abs(currentTilt) * 0.01f); // Compensa il guadagno totale
+                channelData[i] = sample;
+            }
         }
     }
 
@@ -137,6 +147,7 @@ private:
 
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> tiltAmount;
     float pivotFrequency;
+	float lastTiltAmount = 0.0f;
     double sampleRate;
 	float Q;
     // Filtri IIR per ogni canale (stereo)

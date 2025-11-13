@@ -7,11 +7,12 @@
 SubSaverAudioProcessor::SubSaverAudioProcessor()
     : AbstractProcessor(), parameters(*this, nullptr, "SUBSAVER", Parameters::createParameterLayout()),
     dryWetter(Parameters::defaultDryLevel, Parameters::defaultWetLevel, 0),
-    foldback(Parameters::defaultDrive,0.8f,Parameters::defaultStereoWidth),
+    foldback(Parameters::defaultDrive,Parameters::defaultStereoWidth,Parameters::defaultOversampling),
     envelopeFollower(Parameters::defaultEnvAmount),
     tiltFilterPre(0.0f, 1000.0f),  
-    tiltFilterPost(0.0f, 1000.0f)  
+    tiltFilterPost(0.0f, 1000.0f)
 {
+
     Parameters::addListenerToAllParameters(parameters, this);
 }
 
@@ -21,13 +22,14 @@ SubSaverAudioProcessor::~SubSaverAudioProcessor() {}
 //==============================================================================
 void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-	foldback.prepareToPlay(sampleRate);
+	foldback.prepareToPlay(sampleRate,samplesPerBlock, getTotalNumOutputChannels());
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock);
     tiltFilterPre.prepareToPlay(sampleRate, samplesPerBlock);
     tiltFilterPost.prepareToPlay(sampleRate, samplesPerBlock);
     envelopeFollower.prepareToPlay(sampleRate);
     envelopeBuffer.setSize(1, samplesPerBlock);
     modulatedDriveBuffer.setSize(1, samplesPerBlock);
+
 }
 
 void SubSaverAudioProcessor::releaseResources()
@@ -41,11 +43,13 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 
     const int numSamples = buffer.getNumSamples();
 
+
+
     // 1. Salva dry signal
     dryWetter.copyDrySignal(buffer);
 
     // 2. TILT FILTER PRE (modifica contenuto armonico prima della distorsione)
-    tiltFilterPre.processBlock(buffer);
+    tiltFilterPre.processBlock(buffer,numSamples);
 
     // 2. Genera envelope dal segnale (0-1)
     envelopeFollower.processBlock(buffer, envelopeBuffer);
@@ -53,11 +57,11 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     // 3. Copia envelope nel buffer di modulazione
     modulatedDriveBuffer.makeCopyOf(envelopeBuffer, true);
 
-    // 5. Applica distorsione n drive modulato
+    // 4. Applica distorsione n drive modulato
     foldback.processBlock(buffer,modulatedDriveBuffer);
 
-    tiltFilterPost.processBlock(buffer);
-    // 6. Mixa dry/wet
+    tiltFilterPost.processBlock(buffer,numSamples);
+    // 5. Mixa dry/wet
     dryWetter.mergeDryAndWet(buffer);
 }
 
@@ -87,6 +91,10 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
 
         // Tilt POST: inverte il valore (compensa)
         tiltFilterPost.setTiltAmount(-newValue);
+    }
+    else if (parameterID == Parameters::nameOversampling) {
+
+		updateHostDisplay(juce::AudioProcessor::ChangeDetails().withLatencyChanged(true));
     }
 }
 

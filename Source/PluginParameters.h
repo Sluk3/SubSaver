@@ -16,7 +16,7 @@ namespace Parameters
 
     // Default Values & Range
     static const float defaultDryLevel = 1.0f;
-    static const float defaultWetLevel = 1.0f;
+    static const float defaultWetLevel = 0.5f;
     static const float defaultDrive = 5.0f;
     static const float defaultStereoWidth = 0.0f;
     static const float defaultEnvAmount = 1.0f;
@@ -32,9 +32,9 @@ namespace Parameters
         std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
         params.push_back(std::make_unique<AudioParameterFloat>(nameDryLevel, "Dry Level", 0.0f, 1.0f, defaultDryLevel));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameWetLevel, "Wet Level", 0.0f, 1.0f, defaultWetLevel));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameWetLevel, "Wet Level", 0.0f, 0.70f, defaultWetLevel));
         params.push_back(std::make_unique<AudioParameterFloat>(nameDrive, "Drive", 0.0f, 10.0f, defaultDrive));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameStereoWidth, "Stereo Width", 0.0f, 0.5f, defaultStereoWidth));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameStereoWidth, "Stereo Width", 0.0f, 0.25f, defaultStereoWidth));
         params.push_back(std::make_unique<AudioParameterFloat>(nameEnvAmount, "Env Amount", 0.0f, 1.0f, defaultEnvAmount));
         params.push_back(std::make_unique<AudioParameterChoice>(nameShapeMode, "Waveshaping Mode", StringArray{ "A", "B", "C", "D" }, defaultShapeMode));
         params.push_back(std::make_unique<AudioParameterFloat>(nameTilt, "Tilt Pre", -12.0f, 12.0f, defaultTilt));
