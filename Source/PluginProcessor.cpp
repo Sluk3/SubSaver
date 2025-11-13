@@ -93,7 +93,7 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         tiltFilterPost.setTiltAmount(-newValue);
     }
     else if (parameterID == Parameters::nameOversampling) {
-
+		foldback.setOversampling(static_cast<bool>(newValue));
 		updateHostDisplay(juce::AudioProcessor::ChangeDetails().withLatencyChanged(true));
     }
 }

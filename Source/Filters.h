@@ -11,8 +11,8 @@
  * Implementato come combinazione di Low Shelf + High Shelf IIR.
  *
  * Parametri:
- * - tiltAmount: -12dB a +12dB (negativo = più bassi, positivo = più alti)
- * - pivotFreq: frequenza centrale dove il gain è 0dB (default 1kHz)
+ * - tiltAmount: -12dB a +12dB (negativo = piÃ¹ bassi, positivo = piÃ¹ alti)
+ * - pivotFreq: frequenza centrale dove il gain Ã¨ 0dB (default 1kHz)
  *
  * Caratteristiche:
  * - Minimum phase (IIR)
@@ -87,7 +87,7 @@ public:
             // Ottieni il prossimo valore smoothato
             float currentTilt = tiltAmount.getNextValue();
 
-            // Aggiorna i coefficienti solo se c'è un cambiamento significativo
+            // Aggiorna i coefficienti solo se c'Ã¨ un cambiamento significativo
             if (std::abs(currentTilt - lastTiltAmount) > 0.001f)
             {
                 tiltAmount = currentTilt;
@@ -112,7 +112,7 @@ public:
 
     /**
      * Ritorna la latenza stimata in samples
-     * Per filtri IIR minimum-phase è molto bassa
+     * Per filtri IIR minimum-phase Ã¨ molto bassa
      */
     int getLatencySamples() const
     {

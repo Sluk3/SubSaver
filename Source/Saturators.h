@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <JuceHeader.h>
 #include "PluginParameters.h"
@@ -111,7 +111,8 @@ public:
             dcBlocker[ch].reset();
         }
 
-        resetOversampler();
+        resetOversampler(sampleRate);
+		originalSampleRate = sampleRate;
         
     }
     void setOversampling(bool shouldOversample)
@@ -134,7 +135,7 @@ public:
     {
 		if (needsOversamplerReset)//check per resettare l'oversampler se necessario, lo facciamo ora per evitare di sentire click
         {
-            resetOversampler();
+            resetOversampler(originalSampleRate);
             needsOversamplerReset = false;
         }
         const int numChannels = buffer.getNumChannels();
@@ -172,7 +173,7 @@ public:
                 float bias = (ch == 0) ? biasL : biasR;
 
                 // 1. input  drive
-                float driven = bufferData[ch][sample] * driveValue;
+                float driven = oversampledBlock.getSample(ch, sample) * driveValue;
 
                 // 2. + bias
                 driven += bias;
@@ -181,7 +182,7 @@ public:
                 driven *= env;
 
                 // 4. sin~ (o altra waveshaping function)
-                bufferData[ch][sample] = sineFold(driven);
+                oversampledBlock.setSample(ch, sample, sineFold(driven));
 
 
             }
@@ -192,9 +193,8 @@ public:
         // ═══════════════════════════════════════════════════════════
         for (int ch = 0; ch < numChannels; ++ch)
         {
-            float* channelData = buffer.getWritePointer(ch);
             for (int i = 0; i < numSamples; ++i) {
-                channelData[i] = dcBlocker[ch].processSample(channelData[i]);
+                bufferData[ch][i] = dcBlocker[ch].processSample(bufferData[ch][i]);
                 // 6. Gain compensation (*~ 0.5)
                 bufferData[ch][i] *= 0.5f;
             }
@@ -216,13 +216,13 @@ public:
     }
 
 private:
-    void resetOversampler()
+    void resetOversampler(double originalSampleRate)
     {
         if (oversampling)
         {
             // Calcola il fattore di oversampling in base al sample rate target
-            oversamplingFactor = static_cast<int>(TARGET_SAMPLING_RATE / (drive.getCurrentValue() > 0 ? drive.getCurrentValue() : 1.0));
-            oversamplingFactor = juce::jmin(4, juce::jmax(1, oversamplingFactor)); // Limita il fattore tra 1 e 4
+            oversamplingFactor = static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate);
+            oversamplingFactor = juce::jmin(16, juce::jmax(1, oversamplingFactor)); // Limita il fattore tra 1 e 4
             oversampler = std::make_unique<dsp::Oversampling<float>>(
                 2, // numero di canali
                 static_cast<size_t>(std::log2(oversamplingFactor)), // fattore di oversampling come potenza di 2
@@ -243,6 +243,7 @@ private:
     bool oversampling;
     bool needsOversamplerReset = false;
     double overSampledRate = 0;
+	double originalSampleRate = 0;
     std::unique_ptr<dsp::Oversampling<float>> oversampler;
     int oversamplingFactor = 1;
     int latency = 0;
