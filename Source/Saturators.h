@@ -151,14 +151,13 @@ public:
         auto oversampledBlock = oversampler->processSamplesUp(block);
         const size_t numOversampledChannels = oversampledBlock.getNumChannels();
         const size_t numOversampledSamples = oversampledBlock.getNumSamples();
-        
         for (size_t sample = 0; sample < numOversampledSamples; ++sample)
         {
             size_t nativeIndex = sample / oversamplingFactor;            // Calcola l'indice del campione corrispondente nel buffer a frequenza nativa.
             if (nativeIndex >= envelopeBuffer.getNumSamples())           // Controlla se l'indice nativo calcolato supera i limiti del buffer dell'inviluppo.
                 nativeIndex = envelopeBuffer.getNumSamples() - 1;        // Se fuori limite, imposta l'indice all'ultimo campione valido.
 
-            float env = envData[nativeIndex];        // Recupera il valore dell'inviluppo dal canale 0 all'indice nativo corretto。
+            float env = envData[nativeIndex] +1 ;        // Recupera il valore dell'inviluppo dal canale 0 all'indice nativo corretto。
 
 
             float currentWidth = stereoWidth.getNextValue();
@@ -166,14 +165,14 @@ public:
             // Calcola i bias per L e R
             float biasL = currentWidth * (-0.5f);
             float biasR = currentWidth * (+0.5f);
-
+			
             // Processa ogni canale
             for (size_t ch = 0; ch < numOversampledChannels; ++ch)
             {
-                
+                auto dataPtr = oversampledBlock.getChannelPointer(ch);
 
                 // 1. input  drive
-                float driven = oversampledBlock.getSample(ch, sample) * driveValue;
+				float driven = dataPtr[sample] * driveValue;
 
                 // 3.  envelope_mod
                 driven *= env;
@@ -184,7 +183,7 @@ public:
                 
 
                 // 4. sin~ (o altra waveshaping function)
-                oversampledBlock.setSample(ch, sample, sineFold(driven));
+				dataPtr[sample] = sineFold(driven);
 
 
             }
