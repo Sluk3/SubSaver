@@ -158,7 +158,7 @@ public:
             if (nativeIndex >= envelopeBuffer.getNumSamples())           // Controlla se l'indice nativo calcolato supera i limiti del buffer dell'inviluppo.
                 nativeIndex = envelopeBuffer.getNumSamples() - 1;        // Se fuori limite, imposta l'indice all'ultimo campione valido.
 
-            float env = envelopeBuffer.getSample(0, nativeIndex);        // Recupera il valore dell'inviluppo dal canale 0 all'indice nativo corretto。
+            float env = envData[nativeIndex];        // Recupera il valore dell'inviluppo dal canale 0 all'indice nativo corretto。
 
 
             float currentWidth = stereoWidth.getNextValue();
@@ -170,16 +170,18 @@ public:
             // Processa ogni canale
             for (size_t ch = 0; ch < numOversampledChannels; ++ch)
             {
-                float bias = (ch == 0) ? biasL : biasR;
+                
 
                 // 1. input  drive
                 float driven = oversampledBlock.getSample(ch, sample) * driveValue;
 
-                // 2. + bias
-                driven += bias;
-
                 // 3.  envelope_mod
                 driven *= env;
+
+                // 2. + bias
+                driven += (ch == 0) ? biasL : biasR;
+
+                
 
                 // 4. sin~ (o altra waveshaping function)
                 oversampledBlock.setSample(ch, sample, sineFold(driven));
@@ -218,11 +220,10 @@ public:
 private:
     void resetOversampler(double originalSampleRate)
     {
-        if (oversampling)
-        {
+        
             // Calcola il fattore di oversampling in base al sample rate target
-            oversamplingFactor = static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate);
-            oversamplingFactor = juce::jmin(16, juce::jmax(1, oversamplingFactor)); // Limita il fattore tra 1 e 4
+            oversamplingFactor = oversampling ? static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate) : 1;
+            oversamplingFactor = juce::jmin(16, juce::jmax(1, oversamplingFactor)); // Limita il fattore tra 1 e 16
             oversampler = std::make_unique<dsp::Oversampling<float>>(
                 2, // numero di canali
                 static_cast<size_t>(std::log2(oversamplingFactor)), // fattore di oversampling come potenza di 2
@@ -230,12 +231,7 @@ private:
                 true, // massima qualità
                 true  // latenza intera
             );
-        }
-        else
-        {
-            oversamplingFactor = 1;
-            oversampler.reset();
-        }
+        
     }
     SmoothedValue<double, ValueSmoothingTypes::Linear> drive;
     SmoothedValue<double, ValueSmoothingTypes::Linear> stereoWidth;
