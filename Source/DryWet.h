@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <JuceHeader.h>
 
@@ -14,8 +14,13 @@ public:
 
     ~DryWet() {}
 
-    void prepareToPlay(double sampleRate, int maxNumSamples, int maxDelay = 8192)
+    void prepareToPlay(double sampleRate, int maxNumSamples, int maxDelay = 4092)
     {
+        // ═══════════════════════════════════════════════════════════
+       // Alloca circular buffer: deve contenere delay + margine
+       // ═══════════════════════════════════════════════════════════
+        const int minBufferSize = maxDelay + maxNumSamples;
+        const int bufferSize = juce::nextPowerOfTwo(minBufferSize);
         drySignal.setSize(2, maxNumSamples);
         drySignal.clear();
         // Alloca circular buffer per delay compensation
@@ -67,27 +72,33 @@ public:
                 {
                     // Calcola la posizione di lettura (writePosition - delaySamples)
                     int readIdx = (writePosition + i - delaySamples + delayBufferSize) % delayBufferSize;
-                    drySignal.setSample(ch, i, delayBuffer.getSample(ch, readIdx));
-
-                    // Applica i livelli dry/wet smoothati
-                    drySignal.applyGain(dryLevel.getNextValue());
-                    wetBuffer.applyGain(wetLevel.getNextValue());
+                    float delayedSample = delayBuffer.getSample(ch, readIdx);
+                    drySignal.setSample(ch, i, delayedSample);
                 }
             }
 
             // 3. AGGIORNA la write position per il prossimo blocco
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
-
         for (int ch = 0; ch < numChannels; ++ch)
-            wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples);
+        {
+            auto* dryData = drySignal.getWritePointer(ch);
+            auto* wetData = wetBuffer.getWritePointer(ch);
+
+            for (int i = 0; i < numSamples; ++i)
+            {
+                float dry = dryData[i] * dryLevel.getNextValue();
+                float wet = wetData[i] * wetLevel.getNextValue();
+                wetData[i] = dry + wet; // Scrivi il mix finale nel wetBuffer
+            }
+        }
     }
 
     void setDryLevel(float value) { dryLevel.setTargetValue(value); }
     void setWetLevel(float value) { wetLevel.setTargetValue(value); }
     void setDelaySamples(int samples)
-    {
-        delaySamples = samples;
+    { 
+        delaySamples = juce::jlimit(0, delayBuffer.getNumSamples() - 1, samples);
     }
 
 private:

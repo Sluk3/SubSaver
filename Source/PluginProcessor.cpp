@@ -1,4 +1,4 @@
-#include "PluginProcessor.h"
+﻿#include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "PluginParameters.h"
 
@@ -30,7 +30,23 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     envelopeBuffer.setSize(1, samplesPerBlock);
     modulatedDriveBuffer.setSize(1, samplesPerBlock);
     int totalLatency = calculateTotalLatency(sampleRate);
-
+    // ════════════════════════════════════════════════
+    // DEBUG: Stampa la latenza calcolata
+    // ════════════════════════════════════════════════
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::AlertWindow::InfoIcon,
+        "SubSaver Debug",
+        "Total Latency: " + juce::String(totalLatency) + " samples\n" +
+        "Latency (ms): " + juce::String(totalLatency / sampleRate * 1000.0, 2) +
+        ("Sample Rate: " + juce::String(sampleRate) + " Hz")+
+        ("Block Size: " + juce::String(samplesPerBlock) + " samples")+
+        ("Oversampling Latency: " + juce::String(foldback.getLatencySamples()) + " samples")+
+        ("Tilt Pre Latency: " + juce::String(tiltFilterPre.getLatencySamples()) + " samples")+
+        ("Tilt Post Latency: " + juce::String(tiltFilterPost.getLatencySamples()) + " samples")        
+        ,
+        "OK"
+    );
+    
     // Comunica la latenza all'host
     setLatencySamples(totalLatency);
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock, totalLatency);
@@ -73,8 +89,9 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 //==============================================================================
 juce::AudioProcessorEditor* SubSaverAudioProcessor::createEditor()
 {
-    return nullptr; // Ritorna nullptr SE NON hai un editor (e hasEditor ritorna false)
+    return new juce::GenericAudioProcessorEditor(*this);
 }
+
 int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)
 {
     int latency = 0;
