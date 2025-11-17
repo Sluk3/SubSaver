@@ -23,12 +23,17 @@ SubSaverAudioProcessor::~SubSaverAudioProcessor() {}
 void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 	foldback.prepareToPlay(sampleRate,samplesPerBlock, getTotalNumOutputChannels());
-    dryWetter.prepareToPlay(sampleRate, samplesPerBlock);
+    
     tiltFilterPre.prepareToPlay(sampleRate, samplesPerBlock);
     tiltFilterPost.prepareToPlay(sampleRate, samplesPerBlock);
     envelopeFollower.prepareToPlay(sampleRate);
     envelopeBuffer.setSize(1, samplesPerBlock);
     modulatedDriveBuffer.setSize(1, samplesPerBlock);
+    int totalLatency = calculateTotalLatency(sampleRate);
+
+    // Comunica la latenza all'host
+    setLatencySamples(totalLatency);
+    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, totalLatency);
 
 }
 
@@ -70,7 +75,20 @@ juce::AudioProcessorEditor* SubSaverAudioProcessor::createEditor()
 {
     return nullptr; // Ritorna nullptr SE NON hai un editor (e hasEditor ritorna false)
 }
+int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)
+{
+    int latency = 0;
 
+    // Latenza oversampling (es. 4x con filtri FIR)
+    
+    latency += foldback.getLatencySamples();
+
+    // Latenza filtri (dipende dall'ordine e tipo)
+    latency += tiltFilterPre.getLatencySamples();
+    latency += tiltFilterPost.getLatencySamples();
+
+    return latency;
+}
 
 void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {

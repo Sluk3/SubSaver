@@ -25,6 +25,8 @@ public:
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
 
+    int calculateTotalLatency(double sampleRate);
+
     bool hasEditor() const override {
         return false; // (change this to false if you choose to not supply an editor)
     };

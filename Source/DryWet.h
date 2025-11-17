@@ -6,20 +6,25 @@ class DryWet
 {
 public:
     DryWet(float defaultDry = 1.0f, float defaultWet = 1.0f, int defaultDelaySamples = 0)
-        : dryLevel(defaultDry),
-        wetLevel(defaultWet),
-        delaySamples(defaultDelaySamples)
+        : delaySamples(defaultDelaySamples)
     {
+        dryLevel.setCurrentAndTargetValue(defaultDry);
+		wetLevel.setCurrentAndTargetValue(defaultWet);
     }
 
     ~DryWet() {}
 
-    void prepareToPlay(double /*sampleRate*/, int maxNumSamples)
+    void prepareToPlay(double sampleRate, int maxNumSamples, int maxDelay = 8192)
     {
         drySignal.setSize(2, maxNumSamples);
         drySignal.clear();
-        delayBuffer.setSize(2, maxNumSamples + delaySamples);
+        // Alloca circular buffer per delay compensation
+        // Deve contenere delaySamples + margine per il processing block
+        delayBuffer.setSize(2, maxDelay);
         delayBuffer.clear();
+        writePosition = 0;
+		dryLevel.reset(sampleRate, 0.01); // Smoothing veloce
+		wetLevel.reset(sampleRate, 0.01);
     }
 
     void releaseResources()
@@ -28,32 +33,6 @@ public:
         delayBuffer.setSize(0, 0);
     }
 
-    //void processDW(juce::AudioBuffer<float>& wetBuffer, const juce::AudioBuffer<float>& inputBuffer)
-    //{
-    //    const int numChannels = wetBuffer.getNumChannels();
-    //    const int numSamples = wetBuffer.getNumSamples();
-
-    //    // copia dry prima della VCA
-    //    for (int ch = 0; ch < numChannels; ++ch)
-    //        drySignal.copyFrom(ch, 0, inputBuffer, ch, 0, numSamples);
-
-    //    // delay compensation sul dry (solo se delaySamples > 0)
-    //    for (int ch = 0; ch < numChannels; ++ch)
-    //    {
-    //        if (delaySamples > 0)
-    //        {
-    //            delayBuffer.copyFrom(ch, 0, drySignal, ch, 0, numSamples);
-    //            drySignal.copyFrom(ch, 0, delayBuffer, ch, delaySamples, numSamples - delaySamples);
-    //        }
-    //        drySignal.applyGain(ch, 0, numSamples, dryLevel);
-    //    }
-
-    //    // Applica gain wet, somma dry e wet
-    //    wetBuffer.applyGain(wetLevel);
-
-    //    for (int ch = 0; ch < numChannels; ++ch)
-    //        wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples);
-    //}
 
     void copyDrySignal(const juce::AudioBuffer<float>& inputBuffer)
     {
@@ -70,32 +49,52 @@ public:
         const int numSamples = wetBuffer.getNumSamples();
 
         // delay compensation sul dry (solo se delaySamples > 0)
-        for (int ch = 0; ch < numChannels; ++ch)
+        if (delaySamples > 0)
         {
-            if (delaySamples > 0)
-            {
-				delayBuffer.copyFrom(ch, 0, drySignal, ch, 0, numSamples); //sbagliato, cambia con delayline
-                drySignal.copyFrom(ch, 0, delayBuffer, ch, delaySamples, numSamples - delaySamples);
-            }
-            drySignal.applyGain(ch, 0, numSamples, dryLevel);
-        }
+            const int delayBufferSize = delayBuffer.getNumSamples();
 
-        // Applica gain wet, somma dry e wet
-        wetBuffer.applyGain(wetLevel);
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                // 1. SCRIVI i nuovi sample dry nel circular buffer
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    int writeIdx = (writePosition + i) % delayBufferSize;
+                    delayBuffer.setSample(ch, writeIdx, drySignal.getSample(ch, i));
+                }
+
+				// 2. LEGGI i sample ritardati dal circular buffer + applica dry/wet levels
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    // Calcola la posizione di lettura (writePosition - delaySamples)
+                    int readIdx = (writePosition + i - delaySamples + delayBufferSize) % delayBufferSize;
+                    drySignal.setSample(ch, i, delayBuffer.getSample(ch, readIdx));
+
+                    // Applica i livelli dry/wet smoothati
+                    drySignal.applyGain(dryLevel.getNextValue());
+                    wetBuffer.applyGain(wetLevel.getNextValue());
+                }
+            }
+
+            // 3. AGGIORNA la write position per il prossimo blocco
+            writePosition = (writePosition + numSamples) % delayBufferSize;
+        }
 
         for (int ch = 0; ch < numChannels; ++ch)
             wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples);
     }
 
-    void setDryLevel(float value) { dryLevel = value; }
-    void setWetLevel(float value) { wetLevel = value; }
-    void setDelaySamples(int samples) { delaySamples = samples; }
+    void setDryLevel(float value) { dryLevel.setTargetValue(value); }
+    void setWetLevel(float value) { wetLevel.setTargetValue(value); }
+    void setDelaySamples(int samples)
+    {
+        delaySamples = samples;
+    }
 
 private:
-    float dryLevel;
-    float wetLevel;
+	SmoothedValue<float, ValueSmoothingTypes::Linear> dryLevel;
+	SmoothedValue<float, ValueSmoothingTypes::Linear> wetLevel;
     int delaySamples;
-
+	int writePosition = 0;
     juce::AudioBuffer<float> drySignal;
     juce::AudioBuffer<float> delayBuffer;
 

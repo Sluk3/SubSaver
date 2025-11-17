@@ -104,7 +104,7 @@ public:
         drive.reset(sampleRate, 0.03); // Smoothing attack/release veloce
         stereoWidth.reset(sampleRate, 0.03);
         // Imposta DC blocker (highpass 5Hz, come hip~ 5 in PD)
-        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 10.0);
+        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.50);
         for (int ch = 0; ch < 2; ++ch)
         {
             dcBlocker[ch].coefficients = coeffs;
