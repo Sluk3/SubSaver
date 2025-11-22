@@ -7,7 +7,7 @@
 SubSaverAudioProcessor::SubSaverAudioProcessor()
     : AbstractProcessor(), parameters(*this, nullptr, "SUBSAVER", Parameters::createParameterLayout()),
     dryWetter(Parameters::defaultDryLevel, Parameters::defaultWetLevel, 0),
-    foldback(Parameters::defaultDrive,Parameters::defaultStereoWidth,Parameters::defaultOversampling),
+    waveshaper(Parameters::defaultDrive,Parameters::defaultStereoWidth,Parameters::defaultOversampling),
     envelopeFollower(Parameters::defaultEnvAmount),
     tiltFilterPre(0.0f, 1000.0f),  
     tiltFilterPost(0.0f, 1000.0f)
@@ -22,7 +22,7 @@ SubSaverAudioProcessor::~SubSaverAudioProcessor() {}
 //==============================================================================
 void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-	foldback.prepareToPlay(sampleRate,samplesPerBlock, getTotalNumOutputChannels());
+	waveshaper.prepareToPlay(sampleRate,samplesPerBlock, getTotalNumOutputChannels());
     
     tiltFilterPre.prepareToPlay(sampleRate, samplesPerBlock);
     tiltFilterPost.prepareToPlay(sampleRate, samplesPerBlock);
@@ -33,7 +33,7 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     // ════════════════════════════════════════════════
     // DEBUG: Stampa la latenza calcolata
     // ════════════════════════════════════════════════
-    juce::AlertWindow::showMessageBoxAsync(
+    /*juce::AlertWindow::showMessageBoxAsync(
         juce::AlertWindow::InfoIcon,
         "SubSaver Debug",
         "Total Latency: " + juce::String(totalLatency) + " samples\n" +
@@ -45,7 +45,7 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
         ("Tilt Post Latency: " + juce::String(tiltFilterPost.getLatencySamples()) + " samples")        
         ,
         "OK"
-    );
+    );*/
     
     // Comunica la latenza all'host
     setLatencySamples(totalLatency);
@@ -79,7 +79,7 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     modulatedDriveBuffer.makeCopyOf(envelopeBuffer, true);
 
     // 4. Applica distorsione n drive modulato
-    foldback.processBlock(buffer,modulatedDriveBuffer);
+    waveshaper.processBlock(buffer,modulatedDriveBuffer);
 
     tiltFilterPost.processBlock(buffer,numSamples);
     // 5. Mixa dry/wet
@@ -98,7 +98,7 @@ int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)
 
     // Latenza oversampling (es. 4x con filtri FIR)
     
-    latency += foldback.getLatencySamples();
+    latency += waveshaper.getLatencySamples();
 
     // Latenza filtri (dipende dall'ordine e tipo)
     latency += tiltFilterPre.getLatencySamples();
@@ -114,9 +114,9 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
     else if (parameterID == Parameters::nameWetLevel)
         dryWetter.setWetLevel(newValue);
   else if (parameterID == Parameters::nameDrive) 
-        foldback.setDrive(newValue);
+        waveshaper.setDrive(newValue);
     else if (parameterID == Parameters::nameStereoWidth) 
-        foldback.setStereoWidth(newValue);  
+        waveshaper.setStereoWidth(newValue);  
     else if (parameterID == Parameters::nameEnvAmount)
         envelopeFollower.setModAmount(newValue);
     else if (parameterID == Parameters::nameTilt)
@@ -128,9 +128,11 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         tiltFilterPost.setTiltAmount(-newValue);
     }
     else if (parameterID == Parameters::nameOversampling) {
-		foldback.setOversampling(static_cast<bool>(newValue));
+		waveshaper.setOversampling(static_cast<bool>(newValue));
 		updateHostDisplay(juce::AudioProcessor::ChangeDetails().withLatencyChanged(true));
-    }
+    }else if(parameterID == Parameters::nameShapeMode){
+        waveshaper.setWaveshapeType(static_cast<WaveshapeType>(static_cast<int>(newValue)));
+	}
 }
 
 

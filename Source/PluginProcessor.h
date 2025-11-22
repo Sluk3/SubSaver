@@ -38,7 +38,7 @@ public:
 
 private:
     DryWet dryWetter;
-    SineFoldSaturator foldback;
+    WaveshaperCore waveshaper;
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     EnvelopeFollower envelopeFollower;
     juce::AudioProcessorValueTreeState parameters; 
