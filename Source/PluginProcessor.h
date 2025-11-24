@@ -36,12 +36,15 @@ public:
     void getStateInformation(MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
+
+    juce::AudioProcessorValueTreeState parameters;
+
+
 private:
     DryWet dryWetter;
     WaveshaperCore waveshaper;
-    void parameterChanged(const juce::String& parameterID, float newValue) override;
     EnvelopeFollower envelopeFollower;
-    juce::AudioProcessorValueTreeState parameters; 
     TiltFilter tiltFilterPre;  
     TiltFilter tiltFilterPost;  
     juce::AudioBuffer<double> envelopeBuffer;      // Envelope grezzo (0-1)

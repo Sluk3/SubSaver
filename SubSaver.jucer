@@ -5,6 +5,8 @@
               pluginChannelConfigs="{2,2}" pluginVST3Category="Distortion">
   <MAINGROUP id="hNmTAt" name="SubSaver">
     <GROUP id="{54B10528-8184-6FE4-1BCE-355F9A88B3CA}" name="GUI">
+      <FILE id="GUyEos" name="CustomLookAndFeel.h" compile="0" resource="0"
+            file="Source/CustomLookAndFeel.h"/>
       <FILE id="itqYmA" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="C2bPZV" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>

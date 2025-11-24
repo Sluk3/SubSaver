@@ -89,7 +89,7 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 //==============================================================================
 juce::AudioProcessorEditor* SubSaverAudioProcessor::createEditor()
 {
-    return new juce::GenericAudioProcessorEditor(*this);
+    return new SubSaverAudioProcessorEditor(*this); return new SubSaverAudioProcessorEditor(*this);
 }
 
 int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)
