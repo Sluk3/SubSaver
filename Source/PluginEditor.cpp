@@ -157,14 +157,14 @@ void SubSaverAudioProcessorEditor::resized()
 
     // Top row knobs (Freq, Boost)
     auto topRow = centerArea.removeFromTop(90);
-    auto freqArea = topRow.removeFromLeft(topRow.getWidth() / 2);
-    auto boostArea = topRow;
+    auto driveArea = topRow.removeFromLeft(topRow.getWidth() / 2);
+    auto tiltArea = topRow;
 
-    tiltLabel.setBounds(freqArea.removeFromBottom(20));
-    tiltSlider.setBounds(freqArea.reduced(10));
+    tiltLabel.setBounds(tiltArea.removeFromBottom(20));
+    tiltSlider.setBounds(tiltArea.reduced(10));
 
-    driveLabel.setBounds(boostArea.removeFromBottom(20));
-    driveSlider.setBounds(boostArea.reduced(10));
+    driveLabel.setBounds(driveArea.removeFromBottom(20));
+    driveSlider.setBounds(driveArea.reduced(10));
 
     centerArea.removeFromTop(10); // spacing
 

@@ -104,7 +104,7 @@ public:
         auto bounds = button.getLocalBounds().toFloat().reduced(1);
         auto cornerSize = 3.0f;
 
-        // Background (più scuro quando off, più chiaro quando on)
+        // Background (piÃ¹ scuro quando off, piÃ¹ chiaro quando on)
         if (button.getToggleState())
         {
             g.setColour(juce::Colour(0xff5a9a5a)); // Verde quando attivo
@@ -119,7 +119,7 @@ public:
         g.setColour(juce::Colour(0xff1a1a1a));
         g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
 
-        // Text (più piccolo per il bottone compatto)
+        // Text (piÃ¹ piccolo per il bottone compatto)
         g.setColour(juce::Colours::white);
         g.setFont(juce::Font(10.0f, juce::Font::bold));
         g.drawText(button.getButtonText(), bounds, juce::Justification::centred);
