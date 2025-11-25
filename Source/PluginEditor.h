@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "CustomLookAndFeel.h"
+#include "BinaryData.h" 
 
 class SubSaverAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -34,6 +35,10 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> stereoWidthAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> envAmountAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> shapeModeAttachment;
+    // ═══════════════════════════════════════════════════════════
+    // LOGO IMAGE
+    // ═══════════════════════════════════════════════════════════
+    juce::Image logoImage;
 
     // ═══════════════════════════════════════════════════════════
     // OVERSAMPLING BUTTON (bottom right corner)

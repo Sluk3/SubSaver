@@ -7,6 +7,13 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
 {
     setLookAndFeel(&customLookAndFeel);
 
+   
+    logoImage = juce::ImageFileFormat::loadFrom(
+        BinaryData::SubSaverLogo_png,
+        BinaryData::SubSaverLogo_pngSize
+    );
+
+    
     // ═══════════════════════════════════════════════════════════
     // HELPER per configurare knobs
     // ═══════════════════════════════════════════════════════════
@@ -103,7 +110,7 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
 SubSaverAudioProcessorEditor::~SubSaverAudioProcessorEditor()
 {
     setLookAndFeel(nullptr);
-    //logoImage = juce::ImageCache::getFromMemory(BinaryData::logo_png, BinaryData::logo_pngSize);
+    logoImage = juce::ImageCache::getFromMemory(BinaryData::SubSaverLogo_png, BinaryData::SubSaverLogo_pngSize);
 }
 
 void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
@@ -112,7 +119,10 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
     // UPPER SECTION (RED/BURGUNDY) - 310px
     // ═══════════════════════════════════════════════════════════
     auto upperBounds = getLocalBounds().removeFromTop(310);
-    g.setColour(juce::Colour(0xff6b2c2c));
+    g.setGradientFill(juce::ColourGradient(
+        juce::Colour(0xff4a0f0f), 0, 0,
+        juce::Colour(0xff1f1c1c), 0, 310,
+        false));
     g.fillRect(upperBounds);
 
     // ═══════════════════════════════════════════════════════════
@@ -121,6 +131,7 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
     auto logoBand = getLocalBounds().withY(310).withHeight(50);
 
     // Gradiente grigio elegante
+    
     g.setGradientFill(juce::ColourGradient(
         juce::Colour(0xff2a2a2a), 0, 310,
         juce::Colour(0xff1a1a1a), 0, 360,
@@ -132,23 +143,16 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawLine(0, 310, getWidth(), 310, 2.0f);  // Bordo superiore
     g.drawLine(0, 360, getWidth(), 360, 2.0f);  // Bordo inferiore
 
-    // LOGO TEXT (placeholder - sostituisci con immagine se vuoi)
-    g.setColour(juce::Colours::white.withAlpha(0.9f));
-    g.setFont(juce::Font(24.0f, juce::Font::bold));
-    g.drawText("SubSaver", logoBand, juce::Justification::centred);
-
-    // Invece del testo:
-    /*if (logoImage.isValid())
+    
+    //LOGO:
+    if (logoImage.isValid())
     {
-        g.drawImage(logoImage, logoBand.reduced(10).toFloat(),
-            juce::RectanglePlacement::centred);
-    }*/
+        g.drawImage(logoImage,
+            logoBand.reduced(10).toFloat(),
+            juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize); 
 
 
-    // Sottotitolo opzionale
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
-    g.setFont(juce::Font(10.0f, juce::Font::italic));
-    g.drawText("Foldback Distortion", logoBand.withTrimmedTop(28), juce::Justification::centred);
+    }
 
     // ═══════════════════════════════════════════════════════════
     // LOWER SECTION (BLUE/SLATE) - remaining height
