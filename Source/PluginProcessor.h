@@ -47,6 +47,7 @@ private:
     EnvelopeFollower envelopeFollower;
     TiltFilter tiltFilterPre;  
     TiltFilter tiltFilterPost;  
+    Disperser disperser;
     juce::AudioBuffer<double> envelopeBuffer;      // Envelope grezzo (0-1)
     juce::AudioBuffer<double> modulatedDriveBuffer; // Drive modulato
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SubSaverAudioProcessor)

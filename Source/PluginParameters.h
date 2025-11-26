@@ -13,6 +13,9 @@ namespace Parameters
     static const juce::String nameShapeMode = "shapeMode";
     static const juce::String nameTilt = "tilt";
     static const juce::String nameOversampling = "oversampling";
+    static const juce::String nameDisperserAmount = "disperserAmount";
+    static const juce::String nameDisperserFreq = "disperserFreq";
+    static const juce::String nameDisperserPinch = "disperserPinch";
 
     // Default Values & Range
     static const float defaultDryLevel = 1.0f;
@@ -23,6 +26,9 @@ namespace Parameters
     static const int defaultShapeMode = 0; // A
     static const float defaultTilt = 0.0f;
     static const bool defaultOversampling = false;
+    static const float defaultDisperserAmount = 0.0f;
+    static const float defaultDisperserFreq = 1000.0f;
+    static const float defaultDisperserPinch = 1.0f;
 
     // Crea il layout parametri
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
@@ -39,6 +45,9 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterChoice>(nameShapeMode, "Waveshaping Mode", StringArray{ "A", "B", "C", "D" }, defaultShapeMode));
         params.push_back(std::make_unique<AudioParameterFloat>(nameTilt, "Tilt Pre", -12.0f, 12.0f, defaultTilt));
         params.push_back(std::make_unique<AudioParameterBool>(nameOversampling, "Oversampling", defaultOversampling));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserAmount, "Disperser Amount", 0.0f, 1.0f, defaultDisperserAmount));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserFreq, "Disperser Frequency",NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f), defaultDisperserFreq));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserPinch, "Disperser Pinch", 0.1f, 10.0f, defaultDisperserPinch));
 
         return { params.begin(), params.end() };
 
