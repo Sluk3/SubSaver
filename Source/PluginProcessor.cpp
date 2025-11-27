@@ -50,7 +50,7 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     );*/
     
     // Comunica la latenza all'host
-    setLatencySamples(totalLatency+disperser.getLatencySamples());
+    setLatencySamples(totalLatency);
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock, totalLatency);
 
 }
@@ -94,7 +94,7 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 //==============================================================================
 juce::AudioProcessorEditor* SubSaverAudioProcessor::createEditor()
 {
-    return new GenericAudioProcessorEditor(*this);
+    return new SubSaverAudioProcessorEditor(*this);
 }
 
 int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)

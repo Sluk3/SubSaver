@@ -47,7 +47,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterBool>(nameOversampling, "Oversampling", defaultOversampling));
         params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserAmount, "Disperser Amount", 0.0f, 1.0f, defaultDisperserAmount));
         params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserFreq, "Disperser Frequency",NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f), defaultDisperserFreq));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserPinch, "Disperser Pinch", 0.1f, 10.0f, defaultDisperserPinch));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserPinch, "Disperser Pinch", 0.5f, 10.0f, defaultDisperserPinch));
 
         return { params.begin(), params.end() };
 

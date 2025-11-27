@@ -16,17 +16,17 @@ public:
 private:
     SubSaverLookAndFeel customLookAndFeel;
     SubSaverAudioProcessor& audioProcessor;
-
+    juce::Typeface::Ptr montserratFont;
     // ═══════════════════════════════════════════════════════════
     // UPPER SECTION (RED) - Main Distortion
     // ═══════════════════════════════════════════════════════════
-    juce::Slider drySlider;           // Vertical left
-    juce::Slider wetSlider;           // Vertical right
-    juce::Slider tiltSlider;          // "Freq" knob (top left)
-    juce::Slider driveSlider;         // "Boost" knob (top right)
-    juce::Slider stereoWidthSlider;   // "Stereo" knob (bottom left)
-    juce::Slider envAmountSlider;     // "Out gain" knob (bottom right)
-    juce::Slider shapeModeSlider;     // Horizontal slider "Distortion Type"
+    juce::Slider drySlider;
+    juce::Slider wetSlider;
+    juce::Slider tiltSlider;
+    juce::Slider driveSlider;
+    juce::Slider stereoWidthSlider;
+    juce::Slider envAmountSlider;
+    juce::Slider shapeModeSlider;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> dryAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> wetAttachment;
@@ -35,18 +35,35 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> stereoWidthAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> envAmountAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> shapeModeAttachment;
+
+    // ═══════════════════════════════════════════════════════════
+    // LOWER SECTION (BLUE) - Disperser
+    // ═══════════════════════════════════════════════════════════
+    juce::Slider disperserAmountSlider;
+    juce::Slider disperserFreqSlider;
+    juce::Slider disperserPinchSlider;
+
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> disperserAmountAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> disperserFreqAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> disperserPinchAttachment;
+
+    juce::Label disperserAmountLabel;
+    juce::Label disperserFreqLabel;
+    juce::Label disperserPinchLabel;
+    juce::Label disperserTitleLabel;
+
     // ═══════════════════════════════════════════════════════════
     // LOGO IMAGE
     // ═══════════════════════════════════════════════════════════
     juce::Image logoImage;
 
     // ═══════════════════════════════════════════════════════════
-    // OVERSAMPLING BUTTON (bottom right corner)
+    // OVERSAMPLING BUTTON
     // ═══════════════════════════════════════════════════════════
     juce::ToggleButton oversamplingToggle;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> oversamplingAttachment;
 
-    // Labels
+    // Labels upper section
     juce::Label dryLabel, wetLabel, tiltLabel, driveLabel,
         stereoWidthLabel, envAmountLabel, shapeModeLabel;
 

@@ -9,7 +9,7 @@ public:
         // Colori per knobs (scuri con accent rosso)
         setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff2a2e35));
         setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff1a1d22));
-        setColour(juce::Slider::thumbColourId, juce::Colour(0xffff6b6b));
+        setColour(juce::Slider::thumbColourId, juce::Colour(0xfff02f2f));
 
         // Colori per slider lineari
         setColour(juce::Slider::trackColourId, juce::Colour(0xff2a2e35));
@@ -25,11 +25,11 @@ public:
         auto centreY = y + height * 0.5f;
         auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-        // Glow molto sottile (solo 2 layer leggeri)
-        g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.05f));
+        // Glow minimo
+        g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.05f));
         g.fillEllipse(centreX - radius * 1.15f, centreY - radius * 1.15f,
             radius * 2.3f, radius * 2.3f);
-        g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.03f));
+        g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.03f));
         g.fillEllipse(centreX - radius * 1.25f, centreY - radius * 1.25f,
             radius * 2.5f, radius * 2.5f);
 
@@ -38,7 +38,7 @@ public:
         g.fillEllipse(centreX - radius + 2, centreY - radius + 2,
             radius * 2.0f, radius * 2.0f);
 
-        // Main body (grigio scuro metallico con gradiente)
+        // Main body
         g.setGradientFill(juce::ColourGradient(
             juce::Colour(0xff3a3e45), centreX - radius * 0.5f, centreY - radius * 0.5f,
             juce::Colour(0xff22262d), centreX + radius * 0.5f, centreY + radius * 0.5f,
@@ -50,7 +50,7 @@ public:
         g.drawEllipse(centreX - radius + 1, centreY - radius + 1,
             (radius - 1) * 2.0f, (radius - 1) * 2.0f, 1.0f);
 
-        // Track background (anello scuro dove va il progresso)
+        // Track background
         float trackWidth = 6.0f;
         float trackRadius = radius * 0.92f;
 
@@ -68,19 +68,17 @@ public:
         progressArc.addCentredArc(centreX, centreY, trackRadius, trackRadius,
             0.0f, rotaryStartAngle, angle, true);
 
-        // Glow minimo (solo 1 layer molto sottile)
-        g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.15f));
+        g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.15f));
         juce::PathStrokeType glowStroke(trackWidth + 4.0f, juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded);
         g.strokePath(progressArc, glowStroke);
 
-        // Progress arc principale
-        g.setColour(juce::Colour(0xffff6b6b));
+        g.setColour(juce::Colour(0xfff02f2f));
         juce::PathStrokeType progressStroke(trackWidth, juce::PathStrokeType::curved,
             juce::PathStrokeType::rounded);
         g.strokePath(progressArc, progressStroke);
 
-        // Inner circle (più scuro)
+        // Inner circle
         float innerRadius = radius * 0.7f;
         g.setGradientFill(juce::ColourGradient(
             juce::Colour(0xff2a2e35), centreX, centreY - innerRadius,
@@ -89,13 +87,13 @@ public:
         g.fillEllipse(centreX - innerRadius, centreY - innerRadius,
             innerRadius * 2.0f, innerRadius * 2.0f);
 
-        // Pointer indicator (linea sottile rosso luminoso)
+        // Pointer indicator
         juce::Path pointer;
         pointer.addRoundedRectangle(-1.5f, -innerRadius * 0.85f, 3.0f, innerRadius * 0.55f, 1.5f);
         pointer.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
 
         // Glow minimo per l'indicatore
-        g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.3f));
+        g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.25f));
         juce::Path pointerGlow = pointer;
         pointerGlow.applyTransform(juce::AffineTransform::scale(1.2f, 1.2f, centreX, centreY));
         g.fillPath(pointerGlow);
@@ -103,16 +101,8 @@ public:
         // Indicatore solido
         g.setColour(juce::Colour(0xffff8989));
         g.fillPath(pointer);
-
-        // Center cap (piccolo cerchio centrale)
-        float capRadius = 4.0f;
-        g.setColour(juce::Colour(0xff1a1d22));
-        g.fillEllipse(centreX - capRadius, centreY - capRadius, capRadius * 2.0f, capRadius * 2.0f);
-
-        g.setColour(juce::Colour(0xff2a2e35));
-        g.fillEllipse(centreX - capRadius * 0.7f, centreY - capRadius * 0.7f,
-            capRadius * 1.4f, capRadius * 1.4f);
     }
+
 
     void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
         float sliderPos, float minSliderPos, float maxSliderPos,
@@ -124,7 +114,7 @@ public:
             auto trackX = x + (width - trackWidth) * 0.5f;
 
             // Glow minimo
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.04f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.04f));
             g.fillRoundedRectangle(trackX - 3, y, trackWidth + 6, height, (trackWidth + 6) * 0.5f);
 
             // Shadow
@@ -147,15 +137,15 @@ public:
             float fillHeight = height - (thumbPos - y);
 
             // Glow interno minimo
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.2f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.2f));
             g.fillRoundedRectangle(trackX - 1, thumbPos, trackWidth + 2, fillHeight, (trackWidth + 2) * 0.5f);
 
             // Filled portion main
-            g.setColour(juce::Colour(0xffff6b6b));
+            g.setColour(juce::Colour(0xfff02f2f));
             g.fillRoundedRectangle(trackX + 2, thumbPos, trackWidth - 4, fillHeight - 2, (trackWidth - 4) * 0.5f);
 
             // Thumb con glow minimo
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.12f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.12f));
             g.fillRoundedRectangle(trackX - 5, thumbPos - 12, trackWidth + 10, 24, 6.0f);
 
             // Thumb shadow
@@ -179,7 +169,7 @@ public:
             auto trackY = y + (height - trackHeight) * 0.5f;
 
             // Glow minimo
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.04f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.04f));
             g.fillRoundedRectangle(x, trackY - 3, width, trackHeight + 6, (trackHeight + 6) * 0.5f);
 
             // Shadow
@@ -199,14 +189,14 @@ public:
             // Filled portion
             float fillWidth = sliderPos - x;
 
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.2f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.2f));
             g.fillRoundedRectangle(x, trackY - 1, fillWidth, trackHeight + 2, (trackHeight + 2) * 0.5f);
 
-            g.setColour(juce::Colour(0xffff6b6b));
+            g.setColour(juce::Colour(0xfff02f2f));
             g.fillRoundedRectangle(x + 2, trackY + 2, fillWidth - 2, trackHeight - 4, (trackHeight - 4) * 0.5f);
 
             // Thumb glow minimo
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.12f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.12f));
             g.fillRoundedRectangle(sliderPos - 12, trackY - 5, 24, trackHeight + 10, 6.0f);
 
             // Thumb shadow
@@ -234,7 +224,7 @@ public:
         // Glow minimo quando attivo
         if (button.getToggleState())
         {
-            g.setColour(juce::Colour(0xffff6b6b).withAlpha(0.15f));
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.15f));
             g.fillRoundedRectangle(bounds.expanded(3), cornerSize + 1.5f);
         }
 
@@ -246,7 +236,7 @@ public:
         if (button.getToggleState())
         {
             g.setGradientFill(juce::ColourGradient(
-                juce::Colour(0xffff6b6b), bounds.getCentreX(), bounds.getY(),
+                juce::Colour(0xfff02f2f), bounds.getCentreX(), bounds.getY(),
                 juce::Colour(0xffcc5555), bounds.getCentreX(), bounds.getBottom(),
                 false));
         }
