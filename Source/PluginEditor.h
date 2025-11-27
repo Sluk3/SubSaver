@@ -51,7 +51,7 @@ private:
     juce::Label disperserFreqLabel;
     juce::Label disperserPinchLabel;
     juce::Label disperserTitleLabel;
-
+    juce::Label distortionTitleLabel;
     // ═══════════════════════════════════════════════════════════
     // LOGO IMAGE
     // ═══════════════════════════════════════════════════════════

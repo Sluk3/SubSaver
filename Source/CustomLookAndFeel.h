@@ -258,4 +258,10 @@ public:
         g.setFont(juce::Font(11.0f, juce::Font::bold));
         g.drawText(button.getButtonText(), bounds, juce::Justification::centred);
     }
+    
+    int getTextButtonWidthToFitText(juce::TextButton& button, int buttonHeight) override
+    {
+        return button.getWidth();
+    }
+
 };
