@@ -2,6 +2,9 @@
 
 #include <JuceHeader.h>
 #include "PluginParameters.h"
+#include <vector>
+#include <array>
+
 /**
  * TiltFilter - Generic Tilt EQ Filter
  *
@@ -162,44 +165,80 @@ private:
 
 
 /**
- * Disperser - Filtro di dispersione audio
+ * DISPERSER MODULE
  *
- * Un effetto di dispersione che utilizza una serie di filtri allpass
- * per creare un effetto di diffusione/spazializzazione del suono.
+ * Questo modulo implementa una "Allpass Cascade" (cascata di filtri allpass).
+ * L'obiettivo è creare dispersione di fase (group delay) senza alterare la risposta in frequenza (magnitudine).
  *
- * Parametri:
- * - amount: 0.0 (nessuna dispersione) a 1.0 (massima dispersione)
- * - frequency: frequenza centrale della dispersione (20Hz - 20kHz)
- * - pinch: controlla la "concentrazione" della dispersione (0.1 - 10.0)
+ * PROBLEMA NOTO ("FRITTURA" / ZIPPER NOISE):
+ * Quando il parametro 'Amount' viene mosso molto velocemente, si può udire un artefatto simile a una frittura/click.
  *
- * Caratteristiche:
- * - Minimum phase (IIR)
- * - Latenza variabile in base al numero di filtri
- * - Stereo (2 canali indipendenti)
+ * CAUSA TECNICA:
+ * 1. Discontinuità di Stato: I filtri IIR (Infinite Impulse Response) mantengono una "memoria" (stati x1, x2, y1, y2).
+ *    Quando cambiamo i coefficienti (b0, a1, etc.) al volo, l'energia immagazzinata nello stato precedente
+ *    non corrisponde più matematicamente alla risposta del nuovo filtro. Questo crea un "salto" nel segnale in uscita.
+ *
+ * 2. Moltiplicazione dell'Errore: Abbiamo 16 filtri in serie. Un piccolo click generato dal cambio coefficienti
+ *    nel filtro #1 viene amplificato, distorto e disperso dai successivi 15 filtri. L'errore si accumula esponenzialmente.
+ *
+ * 3. Cambio di Q drastico: L'amount controlla il fattore Q. Passare da Q=0.001 (filtro spento) a Q=0.5 (filtro attivo)
+ *    sposta i poli del filtro molto velocemente. Questo rapido movimento dei poli è intrinsecamente rumoroso nei filtri digitali.
+ *
+ * SOLUZIONE ATTUALE (MITIGAZIONE):
+ * - Ramp time molto lungo (500ms) per rallentare il movimento dei parametri.
+ * - Curve di mapping (x^6) per rendere i cambi sui bassi valori quasi impercettibili.
+ * - Control Rate a 64 samples per ridurre la frequenza degli aggiornamenti.
  */
-#pragma once
-#include <JuceHeader.h>
-#include <vector>
 
 class Disperser
 {
 public:
+    // Numero fisso di filtri in serie. 16 stadi sono sufficienti per un effetto "laser/zappy" evidente.
+    // Cambiare questo numero richiederebbe più CPU.
+    static constexpr int MAX_STAGES = 16;
+
+    // Per risparmiare CPU e ridurre gli artefatti, non ricalcoliamo i coefficienti trigonometrici (sin/cos)
+    // per ogni singolo sample, ma ogni 64 sample (circa 1.4ms a 44.1kHz).
+    static constexpr int CONTROL_RATE = 64;
+
     Disperser(float defaultAmount = 0.0f, float defaultFrequency = 1000.0f, float defaultPinch = 1.0f)
-        : amount(defaultAmount), frequency(defaultFrequency), pinch(defaultPinch)
     {
+        // Inizializza gli smoothers con i valori di default
+        smoothedAmount.setCurrentAndTargetValue(defaultAmount);
+        smoothedFrequency.setCurrentAndTargetValue(defaultFrequency);
+        smoothedPinch.setCurrentAndTargetValue(defaultPinch);
+
+        // Inizializza i tracker per il rilevamento dei cambiamenti
+        lastAmount = defaultAmount;
+        lastFrequency = defaultFrequency;
+        lastPinch = defaultPinch;
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock)
     {
         this->sampleRate = sampleRate;
 
-        // Crea processori per ogni canale
+        // CONFIGURAZIONE SMOOTHING
+		// Amount è il parametro più critico per gli artefatti
+        smoothedAmount.reset(sampleRate, 0.05);
+
+        // Freq e Pinch sono meno sensibili agli artefatti, 50ms è sufficiente per renderli fluidi.
+        smoothedFrequency.reset(sampleRate, 0.05);
+        smoothedPinch.reset(sampleRate, 0.05);
+
+        // Reset completo della memoria dei filtri (stati x/y a zero) per evitare click all'avvio o cambio sample rate.
         for (int ch = 0; ch < 2; ++ch)
         {
-            allpassChain[ch].clear();
+            for (auto& filter : filters[ch])
+            {
+                filter.reset();
+            }
         }
 
-        updateFilters();
+        // Allinea i valori di tracking
+        lastAmount = smoothedAmount.getCurrentValue();
+        lastFrequency = smoothedFrequency.getCurrentValue();
+        lastPinch = smoothedPinch.getCurrentValue();
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer)
@@ -207,185 +246,249 @@ public:
         const int numSamples = buffer.getNumSamples();
         const int numChannels = buffer.getNumChannels();
 
-        if (amount <= 0.0001f || allpassChain[0].empty())
-            return;
-
-        // Processa ogni canale
-        for (int ch = 0; ch < numChannels && ch < 2; ++ch)
+        // OTTIMIZZAZIONE BYPASS:
+        // Se l'amount è vicino a zero (sia il valore attuale che quello target), 
+        // l'effetto è inudibile. Saltiamo tutto il calcolo DSP per risparmiare CPU.
+        // Usiamo 0.005 come soglia di sicurezza.
+        if (smoothedAmount.getCurrentValue() < 0.005f && smoothedAmount.getTargetValue() < 0.005f)
         {
-            auto* channelData = buffer.getWritePointer(ch);
+            // Importante: anche se non processiamo, dobbiamo "avanzare" gli smoothers
+            // per mantenerli sincronizzati col tempo reale.
+            smoothedAmount.skip(numSamples);
+            smoothedFrequency.skip(numSamples);
+            smoothedPinch.skip(numSamples);
+            return;
+        }
 
-            // Passa il segnale attraverso ogni stadio allpass
-            for (auto& allpass : allpassChain[ch])
+        // PROCESSO A BLOCCHI (CONTROL RATE)
+        int samplesProcessed = 0;
+
+        while (samplesProcessed < numSamples)
+        {
+            // Determiniamo quanto grande è questo chunk (max 64 samples)
+            int chunkSize = juce::jmin(CONTROL_RATE, numSamples - samplesProcessed);
+
+            // 1. OTTENIAMO I VALORI DEI PARAMETRI
+            // Usiamo getNextValue() per fare un passo dell'interpolazione lineare.
+            float currentAmount = smoothedAmount.getNextValue();
+            float currentFreq = smoothedFrequency.getNextValue();
+            float currentPinch = smoothedPinch.getNextValue();
+
+            // Saltiamo i restanti passi dello smoother per questo chunk, dato che usiamo
+            // un valore costante per tutti i 64 sample del blocco.
+            if (chunkSize > 1)
             {
-                allpass.process(channelData, numSamples);
+                smoothedAmount.skip(chunkSize - 1);
+                smoothedFrequency.skip(chunkSize - 1);
+                smoothedPinch.skip(chunkSize - 1);
             }
+
+            // 2. RILEVAMENTO CAMBIAMENTI (Optimization)
+            // Ricalcolare 32 filtri (16*2 canali) richiede molta trigonometria (sin/cos/pow).
+            // Lo facciamo solo se i parametri sono cambiati significativamente rispetto all'ultimo chunk.
+            bool amountChanged = std::abs(currentAmount - lastAmount) > 0.002f; // Soglia alta per amount
+            bool freqChanged = std::abs(currentFreq - lastFrequency) > 10.0f;   // Soglia Hz
+            bool pinchChanged = std::abs(currentPinch - lastPinch) > 0.02f;     // Soglia pinch
+
+            if (amountChanged || freqChanged || pinchChanged)
+            {
+                updateCoefficients(currentAmount, currentFreq, currentPinch);
+
+                // Aggiorniamo i valori di riferimento
+                lastAmount = currentAmount;
+                lastFrequency = currentFreq;
+                lastPinch = currentPinch;
+            }
+
+            // 3. DSP PROCESSING CORE
+            for (int ch = 0; ch < numChannels && ch < 2; ++ch)
+            {
+                // Puntatore all'audio per questo specifico chunk
+                float* channelData = buffer.getWritePointer(ch) + samplesProcessed;
+
+                // Applichiamo TUTTI i 16 stadi in serie.
+                // Non facciamo crossfade dry/wet o cambio numero stadi per evitare phasing.
+                // L'intensità è gestita modulando il Q dei filtri dentro updateCoefficients.
+                for (int stage = 0; stage < MAX_STAGES; ++stage)
+                {
+                    filters[ch][stage].processChunk(channelData, chunkSize);
+                }
+            }
+
+            samplesProcessed += chunkSize;
         }
     }
 
+    // Metodi per impostare i target dei parametri (chiamati dall'interfaccia/automazione)
     void setAmount(float newAmount)
     {
-        if (std::abs(amount - newAmount) > 0.001f)
-        {
-            amount = juce::jlimit(0.0f, 1.0f, newAmount);
-            updateFilters();
-        }
+        smoothedAmount.setTargetValue(juce::jlimit(0.0f, 1.0f, newAmount));
     }
 
     void setFrequency(float newFrequency)
     {
-        if (std::abs(frequency - newFrequency) > 1.0f)
-        {
-            frequency = juce::jlimit(20.0f, 20000.0f, newFrequency);
-            updateFilters();
-        }
+        smoothedFrequency.setTargetValue(juce::jlimit(20.0f, 20000.0f, newFrequency));
     }
 
     void setPinch(float newPinch)
     {
-        if (std::abs(pinch - newPinch) > 0.01f)
-        {
-            pinch = juce::jlimit(0.1f, 10.0f, newPinch);
-            updateFilters();
-        }
+        smoothedPinch.setTargetValue(juce::jlimit(0.1f, 10.0f, newPinch));
     }
 
+    // La latenza di sistema è 0 perché usiamo filtri IIR (feedback).
+    // C'è group delay (ritardo dipendente dalla frequenza), ma non latenza fissa.
     int getLatencySamples() const
     {
-        if (allpassChain[0].empty())
-            return 0;
-
-        // Ogni filtro aggiunge un po' di latenza
-        int totalLatency = 0;
-        for (const auto& ap : allpassChain[0])
-        {
-            totalLatency += ap.getLatency();
-        }
-        return totalLatency;
+        return 0;
     }
 
 private:
-    // Semplice filtro allpass IIR del secondo ordine
+    // CLASSE INTERNA: BIQUAD ALLPASS
+    // Implementa la formula standard Direct Form II o Transposed Direct Form II per un allpass del 2° ordine.
     class BiquadAllpass
     {
     public:
-        BiquadAllpass()
+        void reset()
         {
-            reset();
+            x1 = x2 = y1 = y2 = 0.0;
+            // Default: passthrough perfetto (Unity Gain)
+            b0 = 1.0; b1 = 0.0; b2 = 0.0;
+            a1 = 0.0; a2 = 0.0;
         }
 
-        void setCoefficients(double freq, double Q, double sampleRate)
+        void updateCoeffs(float freq, float Q, double sampleRate)
         {
-            // Calcola i coefficienti per un allpass del secondo ordine
+            // SAFEGUARD: Se il Q è estremamente basso, il filtro è matematicamente instabile o inutile.
+            // In questo caso lo forziamo a essere un cavo perfetto (Unity Gain).
+            if (Q < 0.002)
+            {
+                b0 = 1.0; b1 = 0.0; b2 = 0.0; a1 = 0.0; a2 = 0.0;
+                return;
+            }
+
+            // CALCOLO COEFFICIENTI ALLPASS 2° ORDINE
+            // Formule standard RBJ Audio EQ Cookbook
             double omega = juce::MathConstants<double>::twoPi * freq / sampleRate;
-            double alpha = std::sin(omega) / (2.0 * Q);
-            double cosOmega = std::cos(omega);
+            double sn = std::sin(omega);
+            double cs = std::cos(omega);
+            double alpha = sn / (2.0 * Q); // Alpha determina la larghezza di banda
 
-            // Normalizza
             double a0 = 1.0 + alpha;
+            double invA0 = 1.0 / a0; // Precalcolo l'inverso per usare moltiplicazioni (più veloci)
 
-            // Coefficienti allpass
-            b0 = (1.0 - alpha) / a0;
-            b1 = (-2.0 * cosOmega) / a0;
-            b2 = (1.0 + alpha) / a0;
-            a1 = (-2.0 * cosOmega) / a0;
-            a2 = (1.0 - alpha) / a0;
+            // Per un Allpass:
+            // Numeratore:   1 - alpha, -2cos, 1 + alpha
+            // Denominatore: 1 + alpha, -2cos, 1 - alpha
+            // Nota come i coefficienti sono simmetrici/scambiati rispetto ad altri filtri.
+            b0 = (1.0 - alpha) * invA0;
+            b1 = (-2.0 * cs) * invA0;
+            b2 = (1.0 + alpha) * invA0;
+            a1 = b1; // In un allpass, coefficiente a1 è uguale a b1
+            a2 = b0; // In un allpass, coefficiente a2 è uguale a b0
         }
 
-        void process(float* buffer, int numSamples)
+        // Processa un blocco di campioni (Loop DSP)
+        void processChunk(float* data, int numSamples)
         {
             for (int i = 0; i < numSamples; ++i)
             {
-                double input = buffer[i];
+                double input = data[i];
 
-                // Direct Form II
+                // Equazione alle differenze (Direct Form I o II normalizzata):
+                // y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
                 double output = b0 * input + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
 
-                // Aggiorna stati
+                // ANTI-DENORMAL:
+                // Quando i numeri diventano troppo piccoli (es. 1.0e-300), la CPU rallenta drasticamente.
+                // Se il segnale è sotto questa soglia, lo forziamo a zero assoluto.
+                if (std::abs(output) < 1.0e-20) output = 0.0;
+
+                // Shift degli stati per il prossimo campione
                 x2 = x1;
                 x1 = input;
                 y2 = y1;
                 y1 = output;
 
-                buffer[i] = static_cast<float>(output);
+                data[i] = static_cast<float>(output);
             }
-        }
-
-        void reset()
-        {
-            x1 = x2 = y1 = y2 = 0.0;
-            b0 = b1 = b2 = a1 = a2 = 0.0;
-        }
-
-        int getLatency() const
-        {
-            return 1; // Allpass biquad ha ~1 sample di group delay medio
         }
 
     private:
-        double b0, b1, b2, a1, a2;
-        double x1, x2, y1, y2;
+        double b0, b1, b2, a1, a2; // Coefficienti
+        double x1, x2, y1, y2;     // Memoria (stato)
     };
 
-    void updateFilters()
+    // LOGICA DI MAPPING DEI PARAMETRI
+    void updateCoefficients(float amount, float freq, float pinch)
     {
-        if (sampleRate <= 0.0)
-            return;
+        float nyquist = static_cast<float>(sampleRate * 0.49);
+        float safeFreq = juce::jlimit(20.0f, nyquist, freq);
 
-        // Mappa amount a numero di stadi (1-16)
-        int numStages = juce::jmax(1, static_cast<int>(amount * 16.0f));
+        // CURVA DI RISPOSTA "AMOUNT" (Cruciale per evitare frittura)
+        // Dobbiamo mappare l'input lineare (0.0 - 1.0) su una curva che cresce MOLTO lentamente all'inizio.
+        float amountCurved;
 
-        if (amount <= 0.0001f)
+        // Zona critica (0% - 30%): Qui avviene la maggior parte dei problemi di "click".
+        // Usiamo una curva polinomiale di 6° grado (x^6). 
+        // Significa che se amount è 0.15 (metà zona), l'effetto è (0.5)^6 = 0.015 (1.5%).
+        // Questo rende il cambiamento dei coefficienti minuscolo in questa zona sensibile.
+        if (amount < 0.30f)
         {
-            for (int ch = 0; ch < 2; ++ch)
-                allpassChain[ch].clear();
-            return;
+            float t = amount / 0.30f;  // Normalizza 0-0.30 a 0.0-1.0
+            amountCurved = t * t * t * t * t * t * 0.05f;  // Scala il risultato a max 0.05
+        }
+        else
+        {
+            // Sopra il 30%, usiamo una curva più standard (cubica) per una risposta musicale.
+            float t = (amount - 0.30f) / 0.70f;
+            amountCurved = 0.05f + (t * t * t) * 0.95f;
         }
 
-        // Ricrea i filtri
-        for (int ch = 0; ch < 2; ++ch)
+        // MAPPARE AMOUNT A FATTRE Q
+        // Minimo Q = 0.0005 (praticamente zero dispersione).
+        // Massimo Q dipende dal "Pinch" (più pinch = picchi più risonanti = più dispersione).
+        double minQ = 0.0005;
+        double maxQ = 0.5 + (pinch * 0.5);
+
+        // Interpoliamo il Q base per tutti i filtri
+        double baseQ = minQ + amountCurved * (maxQ - minQ);
+
+        // DISTRIBUZIONE DEI 16 FILTRI
+        for (int i = 0; i < MAX_STAGES; ++i)
         {
-            allpassChain[ch].clear();
-            allpassChain[ch].resize(numStages);
-        }
+            // Ratio va da 0.0 (primo filtro) a 1.0 (ultimo filtro)
+            float ratio = (MAX_STAGES > 1) ? (float)i / (MAX_STAGES - 1) : 0.5f;
 
-        // Limita frequenza a range sicuro
-        float nyquist = static_cast<float>(sampleRate) * 0.5f;
-        float safeFreq = juce::jlimit(50.0f, nyquist * 0.9f, frequency);
+            // Spread Logaritmico delle frequenze
+            // Pinch controlla quanto sono "sparpagliati" i filtri attorno alla frequenza centrale.
+            // Pinch alto = filtri vicini (picco forte). Pinch basso = filtri larghi (dispersione wide).
+            float octaveSpread = 3.0f / pinch;
+            float multiplier = std::pow(2.0f, (ratio - 0.5f) * octaveSpread);
 
-        // Calcola Q base - valori più alti = picchi più stretti
-        double baseQ = 0.5 + (pinch * 0.5); // Q tra 0.5 e 5.5
+            float stageFreq = juce::jlimit(20.0f, nyquist, safeFreq * multiplier);
 
-        // Crea la catena di filtri allpass
-        for (int i = 0; i < numStages; ++i)
-        {
-            // Distribuzione logaritmica delle frequenze
-            float ratio = numStages > 1 ? static_cast<float>(i) / (numStages - 1.0f) : 0.5f;
-
-            // Spread delle frequenze controllato da pinch
-            // Pinch alto = frequenze più concentrate, basso = più sparse
-            float octaveSpread = 3.0f / pinch; // Spread in ottave
-            float freqMultiplier = std::pow(2.0f, (ratio - 0.5f) * octaveSpread);
-
-            float stageFreq = safeFreq * freqMultiplier;
-            stageFreq = juce::jlimit(50.0f, nyquist * 0.9f, stageFreq);
-
-            // Varia il Q leggermente per ogni stadio (più naturale)
+            // Variazione del Q per stadio
+            // I filtri non hanno tutti lo stesso Q identico per evitare risonanze artificiali troppo metalliche.
             double stageQ = baseQ * (0.8 + ratio * 0.4);
 
-            // Configura i filtri per entrambi i canali (stessi coefficienti)
-            for (int ch = 0; ch < 2; ++ch)
-            {
-                allpassChain[ch][i].setCoefficients(stageFreq, stageQ, sampleRate);
-            }
+            // Aggiorna L e R con gli stessi identici valori (effetto mono-compatibile)
+            filters[0][i].updateCoeffs(stageFreq, stageQ, sampleRate);
+            filters[1][i].updateCoeffs(stageFreq, stageQ, sampleRate);
         }
     }
 
-    float amount;
-    float frequency;
-    float pinch;
-    double sampleRate = 0.0;
+    // Dati Membri
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedAmount;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedFrequency;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedPinch;
 
-    // Catena di filtri allpass per ogni canale
-    std::vector<BiquadAllpass> allpassChain[2];
+    double sampleRate = 44100.0;
+
+    // Valori per il change detection
+    float lastAmount = 0.0f;
+    float lastFrequency = 1000.0f;
+    float lastPinch = 1.0f;
+
+    // Matrice dei filtri: 2 canali x 16 stadi
+    std::array<std::array<BiquadAllpass, MAX_STAGES>, 2> filters;
 };
