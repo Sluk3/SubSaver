@@ -215,10 +215,6 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
 
 void SubSaverAudioProcessorEditor::resized()
 {
-    // Salva l'area del bottone PRIMA di processare tutto
-    auto fullBounds = getLocalBounds();
-    auto buttonAreaSaved = fullBounds.removeFromBottom(40).removeFromRight(55).withSizeKeepingCentre(40, 25);
-
     auto bounds = getLocalBounds();
 
     // ═══════════════════════════════════════════════════════════
@@ -311,9 +307,20 @@ void SubSaverAudioProcessorEditor::resized()
     disperserPinchSlider.setBounds(pinchArea.reduced(10));
 
     // ═══════════════════════════════════════════════════════════
-    // OVERSAMPLING BUTTON - USA L'AREA SALVATA
+    // OVERSAMPLING BUTTON - COORDINATE ASSOLUTE
     // ═══════════════════════════════════════════════════════════
-    oversamplingToggle.setBounds(buttonAreaSaved);
+    // Posiziona il bottone in basso a destra con coordinate fisse
+    int buttonWidth = 40;
+    int buttonHeight = 25;
+    int marginRight = 8;
+    int marginBottom = 8;
+
+    oversamplingToggle.setBounds(
+        getWidth() - buttonWidth - marginRight,    // X: larghezza totale - larghezza bottone - margine
+        getHeight() - buttonHeight - marginBottom, // Y: altezza totale - altezza bottone - margine
+        buttonWidth,
+        buttonHeight
+    );
 }
 
 

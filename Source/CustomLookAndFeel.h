@@ -218,50 +218,50 @@ public:
     void drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
         bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
-        auto bounds = button.getLocalBounds().toFloat().reduced(2);
-        auto cornerSize = 5.0f;
+        auto bounds = button.getLocalBounds().toFloat();  // NO .reduced(2)
+        auto cornerSize = 4.0f;
 
-        // Glow minimo quando attivo
+        // Glow quando attivo (dentro i bounds)
         if (button.getToggleState())
         {
-            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.15f));
-            g.fillRoundedRectangle(bounds.expanded(3), cornerSize + 1.5f);
+            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.12f));
+            g.fillRoundedRectangle(bounds.reduced(0.5f), cornerSize + 1.0f);
         }
 
-        // Shadow
-        g.setColour(juce::Colour(0xff000000).withAlpha(0.4f));
-        g.fillRoundedRectangle(bounds.translated(1, 1), cornerSize);
+        // Shadow (dentro i bounds)
+        auto shadowBounds = bounds.reduced(2).translated(0.5f, 0.5f);
+        g.setColour(juce::Colour(0xff000000).withAlpha(0.3f));
+        g.fillRoundedRectangle(shadowBounds, cornerSize);
 
-        // Background
+        // Main button area
+        auto mainBounds = bounds.reduced(2);
+
         if (button.getToggleState())
         {
             g.setGradientFill(juce::ColourGradient(
-                juce::Colour(0xfff02f2f), bounds.getCentreX(), bounds.getY(),
-                juce::Colour(0xffcc5555), bounds.getCentreX(), bounds.getBottom(),
+                juce::Colour(0xfff02f2f), mainBounds.getCentreX(), mainBounds.getY(),
+                juce::Colour(0xffcc5555), mainBounds.getCentreX(), mainBounds.getBottom(),
                 false));
         }
         else
         {
             g.setGradientFill(juce::ColourGradient(
-                juce::Colour(0xff2a2e35), bounds.getCentreX(), bounds.getY(),
-                juce::Colour(0xff1a1d22), bounds.getCentreX(), bounds.getBottom(),
+                juce::Colour(0xff2a2e35), mainBounds.getCentreX(), mainBounds.getY(),
+                juce::Colour(0xff1a1d22), mainBounds.getCentreX(), mainBounds.getBottom(),
                 false));
         }
-        g.fillRoundedRectangle(bounds, cornerSize);
+        g.fillRoundedRectangle(mainBounds, cornerSize);
 
         // Border
         g.setColour(juce::Colour(0xff0f1215));
-        g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
+        g.drawRoundedRectangle(mainBounds, cornerSize, 0.8f);
 
         // Text
         g.setColour(juce::Colours::white.withAlpha(button.getToggleState() ? 1.0f : 0.7f));
         g.setFont(juce::Font(11.0f, juce::Font::bold));
-        g.drawText(button.getButtonText(), bounds, juce::Justification::centred);
+        g.drawText(button.getButtonText(), mainBounds, juce::Justification::centred);
     }
-    
-    int getTextButtonWidthToFitText(juce::TextButton& button, int buttonHeight) override
-    {
-        return button.getWidth();
-    }
+
+
 
 };
