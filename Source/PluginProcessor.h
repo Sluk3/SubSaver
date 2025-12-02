@@ -7,6 +7,7 @@
 #include "PluginParameters.h"
 #include "EnvelopeFollower.h"
 #include "Filters.h"
+#include "Disperser.h"
 //==============================================================================
 
 
