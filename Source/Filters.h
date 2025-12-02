@@ -152,13 +152,6 @@ private:
  * - Risposta in ampiezza piatta (Unity Gain)
  * - Group delay dipendente dalla frequenza e Q
  * - Interpolazione lineare dei coefficienti su 64 samples (~1.5ms @ 44.1kHz)
- * - Protezione anti-denormal integrata
- *
- * USO TIPICO:
- *   BiquadAllpass filter;
- *   filter.prepare(44100.0);
- *   filter.updateCoeffs(1000.0f, 0.707f);  // Imposta freq e Q
- *   filter.processBlock(audioData, numSamples);
  */
 class BiquadAllpass
 {

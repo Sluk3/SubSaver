@@ -11,7 +11,7 @@ namespace Parameters
     static const juce::String nameStereoWidth = "stereoWidth";
     static const juce::String nameEnvAmount = "envAmount";
     static const juce::String nameShapeMode = "shapeMode";
-    static const juce::String nameTilt = "tilt";
+    static const juce::String nameTilt = "colour";
     static const juce::String nameOversampling = "oversampling";
     static const juce::String nameDisperserAmount = "disperserAmount";
     static const juce::String nameDisperserFreq = "disperserFreq";
@@ -25,7 +25,7 @@ namespace Parameters
     static const float defaultEnvAmount = 1.0f;
     static const int defaultShapeMode = 0; // A
     static const float defaultTilt = 0.0f;
-    static const bool defaultOversampling = false;
+    static const bool defaultOversampling = true;
     static const float defaultDisperserAmount = 0.0f;
     static const float defaultDisperserFreq = 1000.0f;
     static const float defaultDisperserPinch = 1.0f;
@@ -43,7 +43,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(nameStereoWidth, "Stereo Width", 0.0f, 0.25f, defaultStereoWidth));
         params.push_back(std::make_unique<AudioParameterFloat>(nameEnvAmount, "Env Amount", 0.0f, 1.0f, defaultEnvAmount));
         params.push_back(std::make_unique<AudioParameterChoice>(nameShapeMode, "Waveshaping Mode", StringArray{ "A", "B", "C", "D" }, defaultShapeMode));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameTilt, "Tilt Pre", -12.0f, 12.0f, defaultTilt));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameTilt, "Colour", -12.0f, 12.0f, defaultTilt));
         params.push_back(std::make_unique<AudioParameterBool>(nameOversampling, "Oversampling", defaultOversampling));
         params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserAmount, "Disperser Amount", 0.0f, 1.0f, defaultDisperserAmount));
         params.push_back(std::make_unique<AudioParameterFloat>(nameDisperserFreq, "Disperser Frequency",NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f), defaultDisperserFreq));

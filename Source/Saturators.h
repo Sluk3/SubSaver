@@ -10,10 +10,10 @@
 // ═══════════════════════════════════════════════════════════════
 enum class WaveshapeType
 {
-    SineFold = 0,     // A: Sine wavefolder (smooth, musicalità)
-    Triangle = 1,     // B: Triangle wavefolder (geometrico)
-    Foldback = 2,     // C: Foldback classico (hard clipping piegato)
-    Chebyshev = 3     // D: Chebyshev polynomial (armoniche dispari)
+    Chebyshev = 0,    // D: Chebyshev polynomial (armoniche dispari)
+    SineFold = 1,     // A: Sine wavefolder (smooth, musicalità)
+    Triangle = 2,     // B: Triangle wavefolder (geometrico)
+    Foldback = 3     // C: Foldback classico (hard clipping piegato)
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -191,14 +191,14 @@ private:
         }
     }
 
-    // A: Sine Wavefolder (smooth, musical)
+    // B: Sine Wavefolder (smooth, musical)
     static float sineFold(float x)
     {
         return std::sin(juce::MathConstants<float>::twoPi * x);
     }
 
     // ═══════════════════════════════════════════════════════════════
-// B: FOLDBACK WAVEFOLDER (Serge-style)
+// D: FOLDBACK WAVEFOLDER (Serge-style)
 // Formula classica:
 //   - Se |x| <= threshold: return x (lineare)
 //   - Se |x| > threshold: rifletti il segnale attorno alla soglia
@@ -248,7 +248,7 @@ private:
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // D: CHEBYSHEV POLYNOMIAL (3rd order)
+    // A: CHEBYSHEV POLYNOMIAL (3rd order)
     // Formula: T3(x) = 4x³ - 3x
     // Range ottimale input: [-1, 1]
     // Produce principalmente 3rd harmonic (ottave + quinta)
