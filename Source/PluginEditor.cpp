@@ -253,16 +253,17 @@ void SubSaverAudioProcessorEditor::resized()
 
     centerArea.removeFromTop(10);
 
-    // Bottom row knobs
+    // Bottom row knobs - SWAPPED POSITIONS
     auto bottomRow = centerArea.removeFromTop(110);
-    auto stereoArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 2);
-    auto outgainArea = bottomRow;
+    auto envAmountArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 2);
+    auto stereoArea = bottomRow;
+
+    envAmountLabel.setBounds(envAmountArea.removeFromBottom(20));
+    envAmountSlider.setBounds(envAmountArea.reduced(5));
 
     stereoWidthLabel.setBounds(stereoArea.removeFromBottom(20));
     stereoWidthSlider.setBounds(stereoArea.reduced(5));
 
-    envAmountLabel.setBounds(outgainArea.removeFromBottom(20));
-    envAmountSlider.setBounds(outgainArea.reduced(5));
 
     centerArea.removeFromTop(15);
 

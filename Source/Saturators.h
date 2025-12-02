@@ -22,10 +22,7 @@ enum class WaveshapeType
 class WaveshaperCore
 {
 public:
-    WaveshaperCore(double defaultDrive = Parameters::defaultDrive,
-        double defaultStereoWidth = Parameters::defaultStereoWidth,
-        bool defaultOversampling = Parameters::defaultOversampling,
-        WaveshapeType defaultType = WaveshapeType::SineFold)
+    WaveshaperCore(double defaultDrive = Parameters::defaultDrive, double defaultStereoWidth = Parameters::defaultStereoWidth, bool defaultOversampling = Parameters::defaultOversampling, WaveshapeType defaultType = WaveshapeType::SineFold)
         : drive(defaultDrive),
         stereoWidth(defaultStereoWidth),
         oversampling(defaultOversampling),
