@@ -5,11 +5,10 @@
 #include "DryWet.h"
 #include "Saturators.h"
 #include "PluginParameters.h"
-#include "EnvelopeFollower.h"
-#include "Filters.h"
-#include "Disperser.h"
-//==============================================================================
 
+// ════════════════════════════════════════════════════════
+// SUBSAVER LITE PROCESSOR
+// ════════════════════════════════════════════════════════
 
 class SubSaverAudioProcessor : public AbstractProcessor
 {
@@ -29,7 +28,7 @@ public:
     int calculateTotalLatency(double sampleRate);
 
     bool hasEditor() const override {
-        return true; // (change this to false if you choose to not supply an editor)
+        return true;
     };
 
     //==============================================================================
@@ -43,14 +42,13 @@ public:
 
 
 private:
+    // ════════════════════════════════════════════════════════
+    // LITE VERSION - SIMPLIFIED DSP CHAIN:
+    // Input → DryWet Split → Waveshaper (Sine Fold Only) → Mix Output
+    // ════════════════════════════════════════════════════════
+    
     DryWet dryWetter;
     WaveshaperCore waveshaper;
-    EnvelopeFollower envelopeFollower;
-    TiltFilter tiltFilterPre;  
-    TiltFilter tiltFilterPost;  
-    Disperser disperser;
-    juce::AudioBuffer<double> envelopeBuffer;      // Envelope grezzo (0-1)
-    juce::AudioBuffer<double> modulatedDriveBuffer; // Drive modulato
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SubSaverAudioProcessor)
 };
-
