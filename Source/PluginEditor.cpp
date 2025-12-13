@@ -68,7 +68,12 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, Parameters::nameDrive, driveSlider);
 
-   
+    // --- SETUP STEREO SLIDER (AGGIUNTO) ---
+    
+    setupKnob(stereoWidthSlider);
+    // NOTA: Controlla che "stereo" sia l'ID esatto usato in createParameterLayout() nel processore
+    stereoWidthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.parameters, Parameters::nameDrive, stereoWidthSlider);
 
     // Oversampling button
 
@@ -110,32 +115,32 @@ SubSaverAudioProcessorEditor::~SubSaverAudioProcessorEditor()
 void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
 {
     // ═══════════════════════════════════════════════════════════
-    // UPPER SECTION (RED/BURGUNDY) - AUMENTATA a 350px
+    // UPPER SECTION (RED/BURGUNDY)
     // ═══════════════════════════════════════════════════════════
-    auto upperBounds = getLocalBounds().removeFromTop(350);  // Era 320, ora 350
+    auto upperBounds = getLocalBounds().removeFromTop(350);  
 
     g.setGradientFill(juce::ColourGradient(
         juce::Colour(0xff4a0f0f), 0, 0,
-        juce::Colour(0xff1f1c1c), 0, 350,  // Era 320, ora 350
+        juce::Colour(0xff1f1c1c), 0, 350, 
         false));
     g.fillRect(upperBounds);
 
     // ═══════════════════════════════════════════════════════════
-    // LOGO BAND (GREY) - 50px SPOSTATA PIÙ IN BASSO
+    // LOGO BAND (GREY) 
     // ═══════════════════════════════════════════════════════════
-    auto logoBand = getLocalBounds().withY(350).withHeight(50);  // Era Y:320, ora Y:350
+    auto logoBand = getLocalBounds().withY(350).withHeight(50); 
 
     g.setGradientFill(juce::ColourGradient(
-        juce::Colour(0xff2a2a2a), 0, 350,  // Era 320, ora 350
-        juce::Colour(0xff1a1a1a), 0, 400,  // Era 370, ora 400
+        juce::Colour(0xff2a2a2a), 0, 350,  
+        juce::Colour(0xff1a1a1a), 0, 400,  
         false));
     g.fillRect(logoBand);
 
     // Bordi
     g.setColour(juce::Colour(0xff0a0a0a));
-    g.drawLine(0, 350, getWidth(), 350, 2.0f);  // Era 320, ora 350
+    g.drawLine(0, 350, getWidth(), 350, 2.0f); 
     g.setColour(juce::Colour(0xff0a0a0a));
-    g.drawLine(0, 400, getWidth(), 400, 2.0f);  // Era 370, ora 400
+    g.drawLine(0, 400, getWidth(), 400, 2.0f);  
 
     // Logo image
     if (logoImage.isValid())
@@ -158,9 +163,6 @@ void SubSaverAudioProcessorEditor::resized()
     // ═══════════════════════════════════════════════════════════
     auto upperSection = bounds.removeFromTop(350);
 
-    // TITLE "DISTORTION" in alto
-    
-
     upperSection.removeFromTop(3);
 
     // Dry slider (left)
@@ -168,7 +170,7 @@ void SubSaverAudioProcessorEditor::resized()
     dryLabel.setBounds(dryArea.removeFromBottom(20));
     drySlider.setBounds(dryArea);
 
-    // Wet slider (right) - AUMENTATA LARGHEZZA
+    // Wet slider (right) 
     auto wetArea = upperSection.removeFromRight(65).reduced(8, 15);
     wetLabel.setBounds(wetArea.removeFromBottom(20));
     wetSlider.setBounds(wetArea);
@@ -176,24 +178,20 @@ void SubSaverAudioProcessorEditor::resized()
     // Center area for knobs
     auto centerArea = upperSection.reduced(10, 10);
 
-    // Top row knobs
+    // Top row knob
     auto topRow = centerArea.removeFromTop(110);
-    auto driveArea = topRow.removeFromLeft(topRow.getWidth() / 2);
-
-    
+    auto driveArea = topRow;
 
     driveLabel.setBounds(driveArea.removeFromBottom(20));
     driveSlider.setBounds(driveArea.reduced(5));
 
     centerArea.removeFromTop(10);
 
-    // Bottom row knobs - SWAPPED POSITIONS
+    // Bottom row knob
     auto bottomRow = centerArea.removeFromTop(110);
     auto stereoArea = bottomRow;
 
-   
-
-    stereoWidthLabel.setBounds(stereoArea.removeFromBottom(20));
+    stereoWidthLabel.setBounds(stereoArea.removeFromBottom(10));
     stereoWidthSlider.setBounds(stereoArea.reduced(5));
 
 
@@ -201,7 +199,7 @@ void SubSaverAudioProcessorEditor::resized()
 
 
     // ═══════════════════════════════════════════════════════════
-    // LOGO BAND - skip (Y: 350-400)
+    // LOGO BAND 
     // ═══════════════════════════════════════════════════════════
     bounds.removeFromTop(50);
 
