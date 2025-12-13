@@ -5,42 +5,24 @@
 
 #define TARGET_SAMPLING_RATE 192000.0
 
-// ═══════════════════════════════════════════════════════════════
-// ENUM per i tipi di distorsione (shape mode)
-// ═══════════════════════════════════════════════════════════════
-enum class WaveshapeType
-{
-    Chebyshev = 0,    // D: Chebyshev polynomial (armoniche dispari)
-    SineFold = 1,     // A: Sine wavefolder (smooth, musicalità)
-    Triangle = 2,     // B: Triangle wavefolder (geometrico)
-    Foldback = 3     // C: Foldback classico (hard clipping piegato)
-};
-
-// ═══════════════════════════════════════════════════════════════
-// WAVESHAPER CORE - Classe unificata modulare
-// ═══════════════════════════════════════════════════════════════
 class WaveshaperCore
 {
 public:
-    WaveshaperCore(double defaultDrive = Parameters::defaultDrive, double defaultStereoWidth = Parameters::defaultStereoWidth, bool defaultOversampling = Parameters::defaultOversampling, WaveshapeType defaultType = WaveshapeType::SineFold)
+    WaveshaperCore(double defaultDrive = Parameters::defaultDrive, double defaultStereoWidth = Parameters::defaultStereoWidth, bool defaultOversampling = Parameters::defaultOversampling)
         : drive(defaultDrive),
         stereoWidth(defaultStereoWidth),
-        oversampling(defaultOversampling),
-        currentType(defaultType)
+        oversampling(defaultOversampling)
     {
         drive.setCurrentAndTargetValue(defaultDrive);
         stereoWidth.setCurrentAndTargetValue(defaultStereoWidth);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // SETUP & CONFIGURATION
-    // ═══════════════════════════════════════════════════════════
     void prepareToPlay(double sampleRate, int samplesPerBlock, int numCh)
     {
         drive.reset(sampleRate, 0.03);
         stereoWidth.reset(sampleRate, 0.03);
 
-        // DC blocker (HPF 5-7.5Hz)
+        // DC blocker (HPF 7.5Hz)
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.5);
         for (int ch = 0; ch < 2; ++ch)
         {
@@ -53,14 +35,6 @@ public:
         resetOversampler();
     }
 
-    void setWaveshapeType(WaveshapeType type)
-    {
-        if (currentType != type)
-        {
-            currentType = type;
-            // Eventuale reset di stato per alcuni algoritmi
-        }
-    }
 
     void setOversampling(bool shouldOversample)
     {
@@ -80,9 +54,7 @@ public:
         return 0;
     }
 
-    // ═══════════════════════════════════════════════════════════
     // PROCESS BLOCK
-    // ═══════════════════════════════════════════════════════════
     void processBlock(juce::AudioBuffer<float>& buffer)
     {
         if (needsOversamplerReset)
@@ -94,9 +66,7 @@ public:
         const int numChannels = buffer.getNumChannels();
         const int numSamples = buffer.getNumSamples();
 
-        // ═══════════════════════════════════════════════════════
-        // OVERSAMPLING UP
-        // ═══════════════════════════════════════════════════════
+        // OVERSAMPLING UP ------------------------------------------
         juce::dsp::AudioBlock<float> block(buffer);
         juce::dsp::ProcessContextReplacing<float> context(block);
         auto oversampledBlock = oversampler->processSamplesUp(context.getInputBlock());
@@ -104,9 +74,7 @@ public:
         const size_t numOversampledChannels = oversampledBlock.getNumChannels();
         const size_t numOversampledSamples = oversampledBlock.getNumSamples();
 
-        // ═══════════════════════════════════════════════════════
         // PROCESSING LOOP (oversampled)
-        // ═══════════════════════════════════════════════════════
         for (size_t sample = 0; sample < numOversampledSamples; ++sample)
         {
             // Map sample index to native rate envelope
@@ -137,44 +105,36 @@ public:
             }
         }
 
-        // ═══════════════════════════════════════════════════════
-        // OVERSAMPLING DOWN
-        // ═══════════════════════════════════════════════════════
+        // OVERSAMPLING DOWN ------------------------------------------------
         oversampler->processSamplesDown(context.getOutputBlock());
 
-        // ═══════════════════════════════════════════════════════
         // DC BLOCKER + GAIN COMP (native rate)
-        // ═══════════════════════════════════════════════════════
         auto bufferData = buffer.getArrayOfWritePointers();
         for (int ch = 0; ch < numChannels; ++ch)
         {
             for (int i = 0; i < numSamples; ++i)
             {
                 bufferData[ch][i] = dcBlocker[ch].processSample(bufferData[ch][i]);
-                bufferData[ch][i] *= 0.5f; // gain compensation
+                bufferData[ch][i] *= 0.7f; // gain compensation
             }
         }
     }
 
 private:
-    // ═══════════════════════════════════════════════════════════
-    // WAVESHAPING FUNCTIONS (TYPE-SPECIFIC)
-    // ═══════════════════════════════════════════════════════════
+    
     float applyWaveshaping(float x)
     {
        return sineFold(x);
     }
 
-    // B: Sine Wavefolder (smooth, musical)
+    // Sine Wavefolder 
     static float sineFold(float x)
     {
         return std::sin(juce::MathConstants<float>::twoPi * x);
     }
 
 
-    // ═══════════════════════════════════════════════════════════
-    // OVERSAMPLER MANAGEMENT
-    // ═══════════════════════════════════════════════════════════
+    // OVERSAMPLER RESET
     void resetOversampler()
     {
         oversamplingFactor = oversampling
@@ -198,7 +158,6 @@ private:
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> stereoWidth;
     juce::dsp::IIR::Filter<float> dcBlocker[2];
 
-    WaveshapeType currentType;
     bool oversampling;
     bool needsOversamplerReset = false;
 

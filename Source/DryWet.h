@@ -16,19 +16,17 @@ public:
 
     void prepareToPlay(double sampleRate, int maxNumSamples, int maxDelay = 4092)
     {
-        // ═══════════════════════════════════════════════════════════
-       // Alloca circular buffer: deve contenere delay + margine
-       // ═══════════════════════════════════════════════════════════
+       // Alloca circular buffer
         const int minBufferSize = maxDelay + maxNumSamples;
         const int bufferSize = juce::nextPowerOfTwo(minBufferSize);
         drySignal.setSize(2, maxNumSamples);
         drySignal.clear();
         // Alloca circular buffer per delay compensation
-        // Deve contenere delaySamples + margine per il processing block
+        // Deve contenere delaySamples + margine 
         delayBuffer.setSize(2, maxDelay);
         delayBuffer.clear();
         writePosition = 0;
-		dryLevel.reset(sampleRate, 0.01); // Smoothing veloce
+		dryLevel.reset(sampleRate, 0.01); 
 		wetLevel.reset(sampleRate, 0.01);
     }
 

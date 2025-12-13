@@ -2,9 +2,6 @@
 #include "PluginEditor.h"
 #include "PluginParameters.h"
 
-// ════════════════════════════════════════════════════════════════════════════════
-// SUBSAVER LITE - CONSTRUCTOR
-// ════════════════════════════════════════════════════════════════════════════════
 SubSaverAudioProcessor::SubSaverAudioProcessor()
     : AbstractProcessor(), 
       parameters(*this, nullptr, "SUBSAVER_LITE", Parameters::createParameterLayout()),
@@ -16,9 +13,6 @@ SubSaverAudioProcessor::SubSaverAudioProcessor()
 
 SubSaverAudioProcessor::~SubSaverAudioProcessor() {}
 
-// ════════════════════════════════════════════════════════════════════════════════
-// PREPARE TO PLAY
-// ════════════════════════════════════════════════════════════════════════════════
 void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Prepara il waveshaper (gestisce anche oversampling)
@@ -37,12 +31,8 @@ void SubSaverAudioProcessor::releaseResources()
     dryWetter.releaseResources();
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// PROCESS BLOCK - SIMPLIFIED LITE VERSION
-// ════════════════════════════════════════════════════════════════════════════════
 // DSP CHAIN:
-// Input → DRY/WET SPLIT → WAVEFOLDER (sine fold only) → MIX → Output
-// ════════════════════════════════════════════════════════════════════════════════
+// Input → DRY/WET SPLIT → WAVEFOLDER (sine fold) → MIX → Output
 void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -50,34 +40,24 @@ void SubSaverAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     // 1. Salva dry signal (con compensazione latenza)
     dryWetter.copyDrySignal(buffer);
 
-    // 2. Applica wavefolder (Sine Fold) con stereo width
-    //    Drive senza modulazione envelope
+    // 2. Applica Sine Fold con stereo width
     waveshaper.processBlock(buffer);
 
     // 3. Mixa dry/wet
     dryWetter.mergeDryAndWet(buffer);
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// GUI EDITOR
-// ════════════════════════════════════════════════════════════════════════════════
 juce::AudioProcessorEditor* SubSaverAudioProcessor::createEditor()
 {
     return new SubSaverAudioProcessorEditor(*this);
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// LATENCY CALCULATION
-// ════════════════════════════════════════════════════════════════════════════════
 int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)
 {
     // Solo latenza dell'oversampling nel waveshaper
     return waveshaper.getLatencySamples();
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// PARAMETER CHANGED CALLBACK
-// ════════════════════════════════════════════════════════════════════════════════
 void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
     if (parameterID == Parameters::nameDryLevel)
@@ -94,17 +74,11 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
     }
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// PLUGIN INSTANTIATION
-// ════════════════════════════════════════════════════════════════════════════════
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new SubSaverAudioProcessor();
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// STATE INFORMATION (PRESET SAVE/LOAD)
-// ════════════════════════════════════════════════════════════════════════════════
 void SubSaverAudioProcessor::getStateInformation(MemoryBlock& destData)
 {
     auto state = parameters.copyState();

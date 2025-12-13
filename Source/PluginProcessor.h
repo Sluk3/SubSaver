@@ -6,14 +6,10 @@
 #include "Saturators.h"
 #include "PluginParameters.h"
 
-// ════════════════════════════════════════════════════════
-// SUBSAVER LITE PROCESSOR
-// ════════════════════════════════════════════════════════
 
 class SubSaverAudioProcessor : public AbstractProcessor
 {
 public:
-    //==============================================================================
     SubSaverAudioProcessor();
     ~SubSaverAudioProcessor() override;
 
@@ -42,10 +38,6 @@ public:
 
 
 private:
-    // ════════════════════════════════════════════════════════
-    // LITE VERSION - SIMPLIFIED DSP CHAIN:
-    // Input → DryWet Split → Waveshaper (Sine Fold Only) → Mix Output
-    // ════════════════════════════════════════════════════════
     
     DryWet dryWetter;
     WaveshaperCore waveshaper;

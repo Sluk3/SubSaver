@@ -4,9 +4,6 @@
 
 namespace Parameters
 {
-    // ═══════════════════════════════════════════════════════════
-    // SUBSAVER LITE - SIMPLIFIED PARAMETERS
-    // ═══════════════════════════════════════════════════════════
     
     // Nomi parametri
     static const juce::String nameDryLevel = "dryLevel";
@@ -15,7 +12,7 @@ namespace Parameters
     static const juce::String nameStereoWidth = "stereoWidth";
     static const juce::String nameOversampling = "oversampling";
 
-    // Default Values & Range
+    // Default Values 
     static const float defaultDryLevel = 1.0f;
     static const float defaultWetLevel = 0.5f;
     static const float defaultDrive = 0.0f;

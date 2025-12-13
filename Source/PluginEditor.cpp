@@ -6,16 +6,12 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
     setLookAndFeel(&customLookAndFeel);
-    // ═══════════════════════════════════════════════════════════
-    // CARICA FONT MONTSERRAT
-    // ═══════════════════════════════════════════════════════════
+    // CARICA FONT 
     montserratFont = juce::Typeface::createSystemTypefaceFor(
         BinaryData::MontserratBold_ttf,
         BinaryData::MontserratBold_ttfSize
     );
-    // ═══════════════════════════════════════════════════════════
     // HELPER FUNCTIONS
-    // ═══════════════════════════════════════════════════════════
     auto setupKnob = [this](juce::Slider& slider) {
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
@@ -42,17 +38,12 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
         addAndMakeVisible(label);
         };
 
-    // ═══════════════════════════════════════════════════════════
     // LOGO IMAGE
-    // ═══════════════════════════════════════════════════════════
     logoImage = juce::ImageFileFormat::loadFrom(
         BinaryData::SubSaverLogo_png,
         BinaryData::SubSaverLogo_pngSize
     );
 
-    // ═══════════════════════════════════════════════════════════
-    // UPPER SECTION (RED) CONTROLS
-    // ═══════════════════════════════════════════════════════════
 
     // Vertical sliders
     setupVerticalSlider(drySlider);
@@ -68,15 +59,12 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, Parameters::nameDrive, driveSlider);
 
-    // --- SETUP STEREO SLIDER (AGGIUNTO) ---
     
     setupKnob(stereoWidthSlider);
-    // NOTA: Controlla che "stereo" sia l'ID esatto usato in createParameterLayout() nel processore
     stereoWidthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, Parameters::nameStereoWidth, stereoWidthSlider);
 
     // Oversampling button
-
     oversamplingToggle.setButtonText("OS");
     oversamplingToggle.setColour(juce::ToggleButton::textColourId, juce::Colours::white);
     oversamplingToggle.setTooltip("Oversampling On/Off");
@@ -94,14 +82,7 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     setupLabel(driveLabel, "Drive");
     setupLabel(stereoWidthLabel, "Stereo");
    
-   
-   
-
-    
-
-    // ═══════════════════════════════════════════════════════════
-    // SIZE
-    // ═══════════════════════════════════════════════════════════
+    // SIZE PLUGIN
     setSize(330, 400);
 }
 
@@ -114,9 +95,6 @@ SubSaverAudioProcessorEditor::~SubSaverAudioProcessorEditor()
 
 void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // ═══════════════════════════════════════════════════════════
-    // UPPER SECTION (RED/BURGUNDY)
-    // ═══════════════════════════════════════════════════════════
     auto upperBounds = getLocalBounds().removeFromTop(350);  
 
     g.setGradientFill(juce::ColourGradient(
@@ -125,9 +103,7 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
         false));
     g.fillRect(upperBounds);
 
-    // ═══════════════════════════════════════════════════════════
-    // LOGO BAND (GREY) 
-    // ═══════════════════════════════════════════════════════════
+    // LOGO BAND
     auto logoBand = getLocalBounds().withY(350).withHeight(50); 
 
     g.setGradientFill(juce::ColourGradient(
@@ -158,9 +134,6 @@ void SubSaverAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
 
-    // ═══════════════════════════════════════════════════════════
-    // UPPER SECTION (RED) - 350px
-    // ═══════════════════════════════════════════════════════════
     auto upperSection = bounds.removeFromTop(350);
 
     upperSection.removeFromTop(3);
@@ -198,17 +171,12 @@ void SubSaverAudioProcessorEditor::resized()
     centerArea.removeFromTop(15);
 
 
-    // ═══════════════════════════════════════════════════════════
     // LOGO BAND 
-    // ═══════════════════════════════════════════════════════════
     bounds.removeFromTop(50);
 
     
 
-    // ═══════════════════════════════════════════════════════════
-    // OVERSAMPLING BUTTON - COORDINATE ASSOLUTE
-    // ═══════════════════════════════════════════════════════════
-    // Posiziona il bottone in basso a destra con coordinate fisse
+    // OVERSAMPLING BUTTON
     int buttonWidth = 40;
     int buttonHeight = 25;
     int marginRight = 8;
