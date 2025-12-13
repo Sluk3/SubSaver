@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="QMYQNt" name="SubSaver" projectType="audioplug" jucerFormatVersion="1"
+<JUCERPROJECT id="QMYQNt" name="SubSaverLite" projectType="audioplug" jucerFormatVersion="1"
               pluginFormats="buildAU,buildVST3" pluginManufacturer="LIM" pluginManufacturerCode="LIM!"
               pluginChannelConfigs="{2,2}" pluginVST3Category="Distortion">
-  <MAINGROUP id="hNmTAt" name="SubSaver">
+  <MAINGROUP id="hNmTAt" name="SubSaverLite">
     <GROUP id="{5411A753-52BA-1229-46B4-B6A8E094BAA0}" name="Resources">
       <FILE id="dEtuDD" name="Montserrat-Bold.ttf" compile="0" resource="1"
             file="resources/Montserrat-Bold.ttf"/>
@@ -18,10 +18,6 @@
       <FILE id="C2bPZV" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
     </GROUP>
     <GROUP id="{81C2CC64-29E2-C8DC-9E38-E3A24EFBE6CC}" name="DSP">
-      <FILE id="CESkjm" name="Disperser.h" compile="0" resource="0" file="Source/Disperser.h"/>
-      <FILE id="klXPOz" name="Filters.h" compile="0" resource="0" file="Source/Filters.h"/>
-      <FILE id="KdkWcS" name="EnvelopeFollower.h" compile="0" resource="0"
-            file="Source/EnvelopeFollower.h"/>
       <FILE id="AVXVmy" name="Saturators.h" compile="0" resource="0" file="Source/Saturators.h"/>
       <FILE id="D1XpB5" name="DryWet.h" compile="0" resource="0" file="Source/DryWet.h"/>
     </GROUP>

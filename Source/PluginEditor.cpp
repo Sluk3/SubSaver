@@ -68,24 +68,7 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, Parameters::nameDrive, driveSlider);
 
-    setupKnob(tiltSlider);
-    tiltAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameTilt, tiltSlider);
-
-    // Bottom row knobs
-    setupKnob(stereoWidthSlider);
-    stereoWidthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameStereoWidth, stereoWidthSlider);
-
-    setupKnob(envAmountSlider);
-    envAmountAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameEnvAmount, envAmountSlider);
-
-    // Horizontal slider
-    setupHorizontalSlider(shapeModeSlider);
-    shapeModeSlider.setRange(0, 3, 1);
-    shapeModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameShapeMode, shapeModeSlider);
+   
 
     // Oversampling button
 
@@ -102,50 +85,19 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     // Upper section labels
     setupLabel(dryLabel, "Dry Level");
     setupLabel(wetLabel, "Wet Level");
-    setupLabel(tiltLabel, "Colour");
+  
     setupLabel(driveLabel, "Drive");
     setupLabel(stereoWidthLabel, "Stereo");
-    setupLabel(envAmountLabel, "Envelope Follower");
-    setupLabel(shapeModeLabel, "Distortion Type");
-    distortionTitleLabel.setText("DISTORTION", juce::dontSendNotification);
-    distortionTitleLabel.setJustificationType(juce::Justification::centred);
-    distortionTitleLabel.setFont(juce::Font(montserratFont).withHeight(19.0f));
-    distortionTitleLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.8f));
-    addAndMakeVisible(distortionTitleLabel);
+   
+   
+   
 
-    // ═══════════════════════════════════════════════════════════
-    // LOWER SECTION (BLUE) - DISPERSER CONTROLS
-    // ═══════════════════════════════════════════════════════════
-
-    // Disperser knobs
-    setupKnob(disperserAmountSlider);
-    disperserAmountAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameDisperserAmount, disperserAmountSlider);
-
-    setupHorizontalSlider(disperserFreqSlider);  
-    disperserFreqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameDisperserFreq, disperserFreqSlider);
-
-    setupKnob(disperserPinchSlider);
-    disperserPinchAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameDisperserPinch, disperserPinchSlider);
-
-    // Disperser labels
-    setupLabel(disperserAmountLabel, "Amount");
-    setupLabel(disperserFreqLabel, "Frequency");
-    setupLabel(disperserPinchLabel, "Pinch");
-
-    // Title label per la sezione disperser
-    disperserTitleLabel.setText("DISPERSER", juce::dontSendNotification);
-    disperserTitleLabel.setJustificationType(juce::Justification::centred);
-    disperserTitleLabel.setFont(juce::Font(montserratFont).withHeight(19.0f));
-    disperserTitleLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.8f));
-    addAndMakeVisible(disperserTitleLabel);
+    
 
     // ═══════════════════════════════════════════════════════════
     // SIZE
     // ═══════════════════════════════════════════════════════════
-    setSize(330, 660);
+    setSize(330, 400);
 }
 
 
@@ -192,23 +144,7 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
             logoBand.reduced(10).toFloat(),
             juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
     }
-    else
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.9f));
-        g.setFont(juce::Font(montserratFont).withHeight(24.0f));
-        g.drawText("SubSaver", logoBand, juce::Justification::centred);
-    }
 
-    // ═══════════════════════════════════════════════════════════
-    // LOWER SECTION (BLUE/SLATE) - Disperser
-    // ═══════════════════════════════════════════════════════════
-    auto lowerBounds = getLocalBounds().withY(400).withHeight(getHeight() - 400);  // Era 370, ora 400
-
-    g.setGradientFill(juce::ColourGradient(
-        juce::Colour(0xff1c1e1f), 0, 400,  // Era 370, ora 400
-        juce::Colour(0xff0f1f4a), 0, getHeight(),
-        false));
-    g.fillRect(lowerBounds);
 }
 
 
@@ -223,7 +159,7 @@ void SubSaverAudioProcessorEditor::resized()
     auto upperSection = bounds.removeFromTop(350);
 
     // TITLE "DISTORTION" in alto
-    distortionTitleLabel.setBounds(upperSection.removeFromTop(25).reduced(10, 3));
+    
 
     upperSection.removeFromTop(3);
 
@@ -243,10 +179,8 @@ void SubSaverAudioProcessorEditor::resized()
     // Top row knobs
     auto topRow = centerArea.removeFromTop(110);
     auto driveArea = topRow.removeFromLeft(topRow.getWidth() / 2);
-    auto tiltArea = topRow;
 
-    tiltLabel.setBounds(tiltArea.removeFromBottom(20));
-    tiltSlider.setBounds(tiltArea.reduced(5));
+    
 
     driveLabel.setBounds(driveArea.removeFromBottom(20));
     driveSlider.setBounds(driveArea.reduced(5));
@@ -255,11 +189,9 @@ void SubSaverAudioProcessorEditor::resized()
 
     // Bottom row knobs - SWAPPED POSITIONS
     auto bottomRow = centerArea.removeFromTop(110);
-    auto envAmountArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 2);
     auto stereoArea = bottomRow;
 
-    envAmountLabel.setBounds(envAmountArea.removeFromBottom(20));
-    envAmountSlider.setBounds(envAmountArea.reduced(5));
+   
 
     stereoWidthLabel.setBounds(stereoArea.removeFromBottom(20));
     stereoWidthSlider.setBounds(stereoArea.reduced(5));
@@ -267,45 +199,13 @@ void SubSaverAudioProcessorEditor::resized()
 
     centerArea.removeFromTop(15);
 
-    // Distortion Type slider - MARGINI ORIZZONTALI RIDOTTI
-    auto sliderArea = centerArea.removeFromTop(80);
-    shapeModeLabel.setBounds(sliderArea.removeFromTop(22));
-    shapeModeSlider.setBounds(sliderArea.reduced(10, 10));
 
     // ═══════════════════════════════════════════════════════════
     // LOGO BAND - skip (Y: 350-400)
     // ═══════════════════════════════════════════════════════════
     bounds.removeFromTop(50);
 
-    // ═══════════════════════════════════════════════════════════
-    // LOWER SECTION (BLUE) - DISPERSER
-    // ═══════════════════════════════════════════════════════════
-    auto lowerSection = bounds;
-
-    lowerSection.reduce(20, 15);
-
-    disperserTitleLabel.setBounds(lowerSection.removeFromTop(25));
-
-    lowerSection.removeFromTop(10);
-
-    // Frequency slider
-    auto freqSliderArea = lowerSection.removeFromTop(60);
-    disperserFreqLabel.setBounds(freqSliderArea.removeFromTop(20));
-    disperserFreqSlider.setBounds(freqSliderArea.reduced(15, 8));
-
-    lowerSection.removeFromTop(15);
-
-    // 2 Knobs
-    auto knobsArea = lowerSection.removeFromTop(120);
-    int knobWidth = knobsArea.getWidth() / 2;
-
-    auto amountArea = knobsArea.removeFromLeft(knobWidth);
-    disperserAmountLabel.setBounds(amountArea.removeFromBottom(20));
-    disperserAmountSlider.setBounds(amountArea.reduced(10));
-
-    auto pinchArea = knobsArea;
-    disperserPinchLabel.setBounds(pinchArea.removeFromBottom(20));
-    disperserPinchSlider.setBounds(pinchArea.reduced(10));
+    
 
     // ═══════════════════════════════════════════════════════════
     // OVERSAMPLING BUTTON - COORDINATE ASSOLUTE
