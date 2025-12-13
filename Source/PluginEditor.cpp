@@ -73,7 +73,7 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     setupKnob(stereoWidthSlider);
     // NOTA: Controlla che "stereo" sia l'ID esatto usato in createParameterLayout() nel processore
     stereoWidthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameDrive, stereoWidthSlider);
+        audioProcessor.parameters, Parameters::nameStereoWidth, stereoWidthSlider);
 
     // Oversampling button
 
@@ -179,7 +179,7 @@ void SubSaverAudioProcessorEditor::resized()
     auto centerArea = upperSection.reduced(10, 10);
 
     // Top row knob
-    auto topRow = centerArea.removeFromTop(110);
+    auto topRow = centerArea.removeFromTop(150);
     auto driveArea = topRow;
 
     driveLabel.setBounds(driveArea.removeFromBottom(20));
@@ -188,10 +188,10 @@ void SubSaverAudioProcessorEditor::resized()
     centerArea.removeFromTop(10);
 
     // Bottom row knob
-    auto bottomRow = centerArea.removeFromTop(110);
+    auto bottomRow = centerArea.removeFromTop(120);
     auto stereoArea = bottomRow;
 
-    stereoWidthLabel.setBounds(stereoArea.removeFromBottom(10));
+    stereoWidthLabel.setBounds(stereoArea.removeFromBottom(20));
     stereoWidthSlider.setBounds(stereoArea.reduced(5));
 
 

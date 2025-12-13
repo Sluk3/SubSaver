@@ -18,7 +18,7 @@ namespace Parameters
     // Default Values & Range
     static const float defaultDryLevel = 1.0f;
     static const float defaultWetLevel = 0.5f;
-    static const float defaultDrive = 5.0f;
+    static const float defaultDrive = 0.0f;
     static const float defaultStereoWidth = 0.0f;
     static const bool defaultOversampling = true;
 
@@ -31,7 +31,7 @@ namespace Parameters
 
         params.push_back(std::make_unique<AudioParameterFloat>(nameDryLevel, "Dry Level", 0.0f, 1.0f, defaultDryLevel));
         params.push_back(std::make_unique<AudioParameterFloat>(nameWetLevel, "Wet Level", 0.0f, 0.70f, defaultWetLevel));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameDrive, "Drive", NormalisableRange<float>(0.0f, 10.0f, 0.01f, 0.3f), defaultDrive));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameDrive, "Drive", NormalisableRange<float>(0.0f, 10.0f, 0.01f, 0.45f), defaultDrive));
         params.push_back(std::make_unique<AudioParameterFloat>(nameStereoWidth, "Stereo Width", 0.0f, 0.25f, defaultStereoWidth));
         params.push_back(std::make_unique<AudioParameterBool>(nameOversampling, "Oversampling", defaultOversampling));
 

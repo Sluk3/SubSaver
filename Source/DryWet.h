@@ -80,16 +80,16 @@ public:
             // 3. AGGIORNA la write position per il prossimo blocco
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
-        for (int ch = 0; ch < numChannels; ++ch)
+        for (int i = 0; i < numSamples; ++i)
         {
-            auto* dryData = drySignal.getWritePointer(ch);
-            auto* wetData = wetBuffer.getWritePointer(ch);
+            float dryGain = dryLevel.getNextValue();  
+            float wetGain = wetLevel.getNextValue();
 
-            for (int i = 0; i < numSamples; ++i)
+            for (int ch = 0; ch < numChannels; ++ch)
             {
-                float dry = dryData[i] * dryLevel.getNextValue();
-                float wet = wetData[i] * wetLevel.getNextValue();
-                wetData[i] = dry + wet; // Scrivi il mix finale nel wetBuffer
+                float dry = drySignal.getSample(ch, i) * dryGain;
+                float wet = wetBuffer.getSample(ch, i) * wetGain;
+                wetBuffer.setSample(ch, i, dry + wet);
             }
         }
     }
