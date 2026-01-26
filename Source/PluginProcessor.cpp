@@ -18,12 +18,21 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     // Prepara il waveshaper (gestisce anche oversampling)
     waveshaper.prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
     
-    // Calcola la latenza totale e comunica all'host
-    int totalLatency = calculateTotalLatency(sampleRate);
+    int targetOversamplingFactor = static_cast<int>(TARGET_SAMPLING_RATE / sampleRate);
+    targetOversamplingFactor = juce::jmin(16, juce::jmax(1, targetOversamplingFactor));
+
+    // Latenza approssimativa: 64 samples per stage di oversampling
+    int maxPossibleLatency = 64 * static_cast<int>(nextPowerOfTwo(targetOversamplingFactor));
+
+    // Aggiungi margine di sicurezza (50% extra)
+    int maxDelay = static_cast<int>(maxPossibleLatency * 1.5f);
+
+    // Calcola la latenza attuale
+    int totalLatency = waveshaper.getLatencySamples();
     setLatencySamples(totalLatency);
-    
+
     // Prepara il dry/wet mixer con compensazione latenza
-    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), totalLatency);
+    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), maxDelay);
 }
 
 void SubSaverAudioProcessor::releaseResources()
