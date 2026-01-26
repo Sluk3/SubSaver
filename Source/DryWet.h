@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <JuceHeader.h>
 
@@ -94,36 +94,37 @@ public:
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
         
-            //   CONTROLLA SE C'È SMOOTHING ATTIVO
+            //   CONTROLLA SE C'Ãˆ SMOOTHING ATTIVO
+          
             if (dryLevel.isSmoothing() || wetLevel.isSmoothing())
             {
-                // Smoothing attivo - usa loop (necessario)
-                
-
+                // Smoothing attivo - dobbiamo chiamare getNextValue() per ogni sample
                 for (int i = 0; i < numSamples; ++i)
                 {
+                    // â† Chiamato UNA VOLTA per sample (non per canale!)
                     float dryGain = dryLevel.getNextValue();
                     float wetGain = wetLevel.getNextValue();
 
-                    
-                    for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
+                    // Applica lo stesso gain a TUTTI i canali
+                    for (int ch = 0; ch < numChannels; ++ch)
                     {
-                        auto* dryData = drySignal.getWritePointer(ch);
-                        auto* wetData = wetBuffer.getWritePointer(ch);
-                        wetData[i] = dryData[i] * dryGain + wetData[i] * wetGain;  //   ACCESSO ARRAY
+                        float dry = drySignal.getSample(ch, i) * dryGain;
+                        float wet = wetBuffer.getSample(ch, i) * wetGain;
+                        wetBuffer.setSample(ch, i, dry + wet);
                     }
                 }
             }
             else
             {
-                //   VALORI STABILI - usa operazioni vettoriali (MOLTO PIÙ VELOCE)
-                float dryGain = dryLevel.getCurrentValue();  //   UNA SOLA CHIAMATA
+                // Valori stabili - usa operazioni vettoriali per efficienza
+                float dryGain = dryLevel.getCurrentValue();
                 float wetGain = wetLevel.getCurrentValue();
-                for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
+
+                for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    //   OPERAZIONI VETTORIALI OTTIMIZZATE JUCE
-                    wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
+                    // Ottimizzazione: operazioni vettoriali
                     wetBuffer.applyGain(ch, 0, numSamples, wetGain);
+                    wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
                 }
             }
         }
