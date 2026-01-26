@@ -23,7 +23,7 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     setLatencySamples(totalLatency);
     
     // Prepara il dry/wet mixer con compensazione latenza
-    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, totalLatency);
+    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), totalLatency);
 }
 
 void SubSaverAudioProcessor::releaseResources()
@@ -70,8 +70,14 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         waveshaper.setStereoWidth(newValue);  
     else if (parameterID == Parameters::nameOversampling) {
         waveshaper.setOversampling(static_cast<bool>(newValue));
-        updateHostDisplay(juce::AudioProcessor::ChangeDetails().withLatencyChanged(true));
+        // Ricalcola la latenza totale e aggiorna l'host
+        int newLatency = calculateTotalLatency(getSampleRate());
+        setLatencySamples(newLatency);
+
+        // Aggiorna anche il dryWetter con la nuova latenza
+        dryWetter.setDelaySamples(newLatency);
     }
+
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

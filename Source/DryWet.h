@@ -14,16 +14,16 @@ public:
 
     ~DryWet() {}
 
-    void prepareToPlay(double sampleRate, int maxNumSamples, int maxDelay = 4092)
+    void prepareToPlay(double sampleRate, int maxNumSamples, int numChannels, int maxDelay = 4092)
     {
        // Alloca circular buffer
         const int minBufferSize = maxDelay + maxNumSamples;
         const int bufferSize = juce::nextPowerOfTwo(minBufferSize);
-        drySignal.setSize(2, maxNumSamples);
+        drySignal.setSize(numChannels, maxNumSamples);
         drySignal.clear();
         // Alloca circular buffer per delay compensation
         // Deve contenere delaySamples + margine 
-        delayBuffer.setSize(2, maxDelay);
+        delayBuffer.setSize(numChannels, maxDelay);
         delayBuffer.clear();
         writePosition = 0;
 		dryLevel.reset(sampleRate, 0.01); 
@@ -52,42 +52,72 @@ public:
         const int numSamples = wetBuffer.getNumSamples();
 
         // delay compensation sul dry (solo se delaySamples > 0)
+        // NUOVO CODICE (operazioni vettoriali):
         if (delaySamples > 0)
         {
             const int delayBufferSize = delayBuffer.getNumSamples();
 
             for (int ch = 0; ch < numChannels; ++ch)
             {
-                // 1. SCRIVI i nuovi sample dry nel circular buffer
-                for (int i = 0; i < numSamples; ++i)
+                // 1. SCRIVI con copyFrom (ottimizzato SIMD)
+                const int space = delayBufferSize - writePosition;  //   CALCOLA SPAZIO DISPONIBILE
+
+                if (numSamples <= space)
                 {
-                    int writeIdx = (writePosition + i) % delayBufferSize;
-                    delayBuffer.setSample(ch, writeIdx, drySignal.getSample(ch, i));
+                    //   SCRITTURA IN UN BLOCCO (veloce)
+                    delayBuffer.copyFrom(ch, writePosition, drySignal, ch, 0, numSamples);
+                }
+                else
+                {
+                    //   SCRITTURA IN DUE BLOCCHI per wrap-around
+                    delayBuffer.copyFrom(ch, writePosition, drySignal, ch, 0, space);
+                    delayBuffer.copyFrom(ch, 0, drySignal, ch, space, numSamples - space);
                 }
 
-				// 2. LEGGI i sample ritardati dal circular buffer + applica dry/wet levels
-                for (int i = 0; i < numSamples; ++i)
+                // 2. LEGGI con copyFrom (ottimizzato SIMD)
+                const int readStart = (writePosition - delaySamples + delayBufferSize) % delayBufferSize;
+
+                if (readStart + numSamples <= delayBufferSize)
                 {
-                    // Calcola la posizione di lettura (writePosition - delaySamples)
-                    int readIdx = (writePosition + i - delaySamples + delayBufferSize) % delayBufferSize;
-                    float delayedSample = delayBuffer.getSample(ch, readIdx);
-                    drySignal.setSample(ch, i, delayedSample);
+                    //   LETTURA IN UN BLOCCO (veloce)
+                    drySignal.copyFrom(ch, 0, delayBuffer, ch, readStart, numSamples);
+                }
+                else
+                {
+                    //   LETTURA IN DUE BLOCCHI per wrap-around
+                    const int samplesBeforeWrap = delayBufferSize - readStart;
+                    drySignal.copyFrom(ch, 0, delayBuffer, ch, readStart, samplesBeforeWrap);
+                    drySignal.copyFrom(ch, samplesBeforeWrap, delayBuffer, ch, 0, numSamples - samplesBeforeWrap);
                 }
             }
 
-            // 3. AGGIORNA la write position per il prossimo blocco
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
-        for (int i = 0; i < numSamples; ++i)
+        for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
         {
-            float dryGain = dryLevel.getNextValue();  
-            float wetGain = wetLevel.getNextValue();
-
-            for (int ch = 0; ch < numChannels; ++ch)
+            //   CONTROLLA SE C'È SMOOTHING ATTIVO
+            if (dryLevel.isSmoothing() || wetLevel.isSmoothing())
             {
-                float dry = drySignal.getSample(ch, i) * dryGain;
-                float wet = wetBuffer.getSample(ch, i) * wetGain;
-                wetBuffer.setSample(ch, i, dry + wet);
+                // Smoothing attivo - usa loop (necessario)
+                auto* dryData = drySignal.getWritePointer(ch);  //   PUNTATORI DIRETTI
+                auto* wetData = wetBuffer.getWritePointer(ch);
+
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    float dryGain = dryLevel.getNextValue();
+                    float wetGain = wetLevel.getNextValue();
+                    wetData[i] = dryData[i] * dryGain + wetData[i] * wetGain;  //   ACCESSO ARRAY
+                }
+            }
+            else
+            {
+                //   VALORI STABILI - usa operazioni vettoriali (MOLTO PIÙ VELOCE)
+                float dryGain = dryLevel.getCurrentValue();  //   UNA SOLA CHIAMATA
+                float wetGain = wetLevel.getCurrentValue();
+
+                //   OPERAZIONI VETTORIALI OTTIMIZZATE JUCE
+                wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
+                wetBuffer.applyGain(ch, 0, numSamples, wetGain);
             }
         }
     }
