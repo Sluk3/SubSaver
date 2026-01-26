@@ -93,20 +93,25 @@ public:
 
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
-        for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
-        {
+        
             //   CONTROLLA SE C'È SMOOTHING ATTIVO
             if (dryLevel.isSmoothing() || wetLevel.isSmoothing())
             {
                 // Smoothing attivo - usa loop (necessario)
-                auto* dryData = drySignal.getWritePointer(ch);  //   PUNTATORI DIRETTI
-                auto* wetData = wetBuffer.getWritePointer(ch);
+                
 
                 for (int i = 0; i < numSamples; ++i)
                 {
                     float dryGain = dryLevel.getNextValue();
                     float wetGain = wetLevel.getNextValue();
-                    wetData[i] = dryData[i] * dryGain + wetData[i] * wetGain;  //   ACCESSO ARRAY
+
+                    
+                    for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
+                    {
+                        auto* dryData = drySignal.getWritePointer(ch);
+                        auto* wetData = wetBuffer.getWritePointer(ch);
+                        wetData[i] = dryData[i] * dryGain + wetData[i] * wetGain;  //   ACCESSO ARRAY
+                    }
                 }
             }
             else
@@ -114,13 +119,15 @@ public:
                 //   VALORI STABILI - usa operazioni vettoriali (MOLTO PIÙ VELOCE)
                 float dryGain = dryLevel.getCurrentValue();  //   UNA SOLA CHIAMATA
                 float wetGain = wetLevel.getCurrentValue();
-
-                //   OPERAZIONI VETTORIALI OTTIMIZZATE JUCE
-                wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
-                wetBuffer.applyGain(ch, 0, numSamples, wetGain);
+                for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
+                {
+                    //   OPERAZIONI VETTORIALI OTTIMIZZATE JUCE
+                    wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
+                    wetBuffer.applyGain(ch, 0, numSamples, wetGain);
+                }
             }
         }
-    }
+    
 
     void setDryLevel(float value) { dryLevel.setTargetValue(value); }
     void setWetLevel(float value) { wetLevel.setTargetValue(value); }
