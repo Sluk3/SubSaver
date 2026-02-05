@@ -136,7 +136,13 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
     }
     else if (parameterID == Parameters::nameOversampling) {
 		waveshaper.setOversampling(static_cast<bool>(newValue));
-		updateHostDisplay(juce::AudioProcessor::ChangeDetails().withLatencyChanged(true));
+		
+		// FIX: Ricalcola la latenza totale e aggiorna l'host
+		int newLatency = calculateTotalLatency(getSampleRate());
+		setLatencySamples(newLatency);  // setLatencySamples già chiama updateHostDisplay
+
+		// FIX: Aggiorna anche il dryWetter con la nuova latenza
+		dryWetter.setDelaySamples(newLatency);
     }else if(parameterID == Parameters::nameShapeMode){
         waveshaper.setWaveshapeType(static_cast<WaveshapeType>(static_cast<int>(newValue)));
 	}
