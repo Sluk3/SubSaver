@@ -22,14 +22,15 @@ enum class WaveshapeType
 class WaveshaperCore
 {
 public:
-    WaveshaperCore(double defaultDrive = Parameters::defaultDrive, double defaultStereoWidth = Parameters::defaultStereoWidth, bool defaultOversampling = Parameters::defaultOversampling, WaveshapeType defaultType = WaveshapeType::SineFold)
+    WaveshaperCore(double defaultDrive = Parameters::defaultDrive, double defaultStereoWidth = Parameters::defaultStereoWidth, bool defaultOversampling = Parameters::defaultOversampling)
         : drive(defaultDrive),
         stereoWidth(defaultStereoWidth),
         oversampling(defaultOversampling),
-        currentType(defaultType)
+        morphValue(0.0f)  // NUOVO: inizializza a 0 (Chebyshev)
     {
         drive.setCurrentAndTargetValue(defaultDrive);
         stereoWidth.setCurrentAndTargetValue(defaultStereoWidth);
+        morphValue.setCurrentAndTargetValue(0.0f);  // NUOVO
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -39,6 +40,7 @@ public:
     {
         drive.reset(sampleRate, 0.03);
         stereoWidth.reset(sampleRate, 0.03);
+        morphValue.reset(sampleRate, 0.03);  // NUOVO: smoothing 30ms
 
         // DC blocker (HPF 5-7.5Hz)
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.5);
@@ -55,15 +57,11 @@ public:
         initOversamplers(samplesPerBlock);
     }
 
-    void setWaveshapeType(WaveshapeType type)
+    
+    void setMorphValue(float value)
     {
-        if (currentType != type)
-        {
-            currentType = type;
-            // Eventuale reset di stato per alcuni algoritmi
-        }
+        morphValue.setTargetValue(juce::jlimit(0.0f, 3.0f, value));
     }
-
     void setOversampling(bool shouldOversample)
     {
         oversampling = shouldOversample;
@@ -172,24 +170,35 @@ private:
     // ═══════════════════════════════════════════════════════════
     float applyWaveshaping(float x)
     {
-        switch (currentType)
+        float morph = morphValue.getNextValue();
+
+        // Calcola tutte e 4 le funzioni
+        float shape0 = chebyshevPoly(x);      // 0.0
+        float shape1 = sineFold(x);           // 1.0
+        float shape2 = triangleWavefolder(x); // 2.0
+        float shape3 = foldback(x);           // 3.0
+
+        // Determina quale coppia di funzioni interpolare
+        if (morph < 1.0f)
         {
-        case WaveshapeType::SineFold:
-            return sineFold(x);
-
-        case WaveshapeType::Foldback:
-            return foldback(x);
-
-        case WaveshapeType::Triangle:
-            return triangleWavefolder(x);
-
-        case WaveshapeType::Chebyshev:
-            return chebyshevPoly(x);
-
-        default:
-            return x;
+            // Morph tra Chebyshev (0) e SineFold (1)
+            float blend = morph;  // 0.0 - 1.0
+            return shape0 * (1.0f - blend) + shape1 * blend;
+        }
+        else if (morph < 2.0f)
+        {
+            // Morph tra SineFold (1) e Triangle (2)
+            float blend = morph - 1.0f;  // 0.0 - 1.0
+            return shape1 * (1.0f - blend) + shape2 * blend;
+        }
+        else
+        {
+            // Morph tra Triangle (2) e Foldback (3)
+            float blend = morph - 2.0f;  // 0.0 - 1.0
+            return shape2 * (1.0f - blend) + shape3 * blend;
         }
     }
+
 
     // B: Sine Wavefolder (smooth, musical)
     static float sineFold(float x)
@@ -293,6 +302,7 @@ private:
 
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> drive;
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> stereoWidth;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> morphValue;
     juce::dsp::IIR::Filter<float> dcBlocker[2];
 
     WaveshapeType currentType;

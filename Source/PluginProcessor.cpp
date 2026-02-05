@@ -142,9 +142,10 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         // Aggiorna anche il dryWetter con la nuova latenza
         dryWetter.setDelaySamples(newLatency);
     
-    }else if(parameterID == Parameters::nameShapeMode){
-        waveshaper.setWaveshapeType(static_cast<WaveshapeType>(static_cast<int>(newValue)));
-	}
+    }
+    else if (parameterID == Parameters::nameMorph) {
+        waveshaper.setMorphValue(newValue);  // Ora passa direttamente il float 0.0-3.0
+    }
     else if (parameterID == Parameters::nameDisperserAmount)
         disperser.setAmount(newValue);
     else if (parameterID == Parameters::nameDisperserFreq)

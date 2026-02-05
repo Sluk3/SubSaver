@@ -85,7 +85,7 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     setupHorizontalSlider(shapeModeSlider);
     shapeModeSlider.setRange(0, 3, 1);
     shapeModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, Parameters::nameShapeMode, shapeModeSlider);
+        audioProcessor.parameters, Parameters::nameMorph, shapeModeSlider);
 
     // Oversampling button
 
