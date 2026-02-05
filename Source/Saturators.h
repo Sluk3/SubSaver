@@ -37,8 +37,9 @@ public:
     // ═══════════════════════════════════════════════════════════
     void prepareToPlay(double sampleRate, int samplesPerBlock, int numCh)
     {
-        drive.reset(sampleRate, 0.03);
-        stereoWidth.reset(sampleRate, 0.03);
+        // FIX ZIPPER NOISE: Aumentato tempo di smoothing
+        drive.reset(sampleRate, 0.05);  // era 0.03
+        stereoWidth.reset(sampleRate, 0.1);  // era 0.03
 
         // DC blocker (HPF 5-7.5Hz)
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.5);
@@ -66,8 +67,14 @@ public:
 
     void setOversampling(bool shouldOversample)
     {
-        oversampling = shouldOversample;
-        // FIX: NESSUN RESET - solo switch tra istanze già pronte
+        if (oversampling != shouldOversample)
+        {
+            oversampling = shouldOversample;
+            
+            // FIX: Reset DC blocker per evitare discontinuità nello switch
+            for (int ch = 0; ch < 2; ++ch)
+                dcBlocker[ch].reset();
+        }
     }
 
     void setDrive(double value) { drive.setTargetValue(value); }
@@ -276,6 +283,7 @@ private:
             true
         );
         oversamplerBypass->initProcessing(static_cast<size_t>(samplesPerBlock));
+        oversamplerBypass->reset();  // FIX: Inizializza stati puliti
 
         // NUOVO: Oversampler high quality (4x+)
         oversamplingFactorHigh = static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate);
@@ -289,6 +297,7 @@ private:
             true
         );
         oversamplerHigh->initProcessing(static_cast<size_t>(samplesPerBlock));
+        oversamplerHigh->reset();  // FIX: Inizializza stati puliti
     }
 
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> drive;
