@@ -14,18 +14,25 @@ public:
 
     ~DryWet() {}
 
-    void prepareToPlay(double sampleRate, int maxNumSamples, int numChannels, int maxDelay = 4092)
+    void prepareToPlay(double sampleRate, int maxNumSamples, int numChannels, int maxDelay)
     {
-        // Alloca circular buffer
-        const int minBufferSize = maxDelay + maxNumSamples;
-        const int bufferSize = juce::nextPowerOfTwo(minBufferSize);
+        // VERIFICA parametri
+        jassert(sampleRate > 0.0);
+        jassert(maxNumSamples > 0);
+        jassert(numChannels > 0);
+        jassert(maxDelay > 0);
+
         drySignal.setSize(numChannels, maxNumSamples);
         drySignal.clear();
-        // Alloca circular buffer per delay compensation
-        // Deve contenere delaySamples + margine 
-        delayBuffer.setSize(numChannels, maxDelay);
+
+        // Assicurati che il buffer sia abbastanza grande
+        int safeDelaySize = juce::jmax(maxDelay, maxNumSamples * 2);
+
+        delayBuffer.setSize(numChannels, safeDelaySize);
         delayBuffer.clear();
+
         writePosition = 0;
+
         dryLevel.reset(sampleRate, 0.01);
         wetLevel.reset(sampleRate, 0.01);
     }
@@ -51,82 +58,138 @@ public:
         const int numChannels = wetBuffer.getNumChannels();
         const int numSamples = wetBuffer.getNumSamples();
 
-        // delay compensation sul dry (solo se delaySamples > 0)
-        // NUOVO CODICE (operazioni vettoriali):
+        // ═══════════════════════════════════════════════════════════════
+        // DELAY COMPENSATION
+        // ═══════════════════════════════════════════════════════════════
         if (delaySamples > 0)
         {
             const int delayBufferSize = delayBuffer.getNumSamples();
 
+            // VERIFICA: controllo sicurezza
+            if (delayBufferSize == 0 || delaySamples >= delayBufferSize)
+            {
+                jassertfalse;
+                return;
+            }
+
             for (int ch = 0; ch < numChannels; ++ch)
             {
-                // 1. SCRIVI con copyFrom (ottimizzato SIMD)
-                const int space = delayBufferSize - writePosition;  //   CALCOLA SPAZIO DISPONIBILE
+                // ═════════════════════════════════════════════════════════════
+                // 1. SCRIVI nel circular buffer
+                // ═════════════════════════════════════════════════════════════
+                int samplesRemaining = numSamples;
+                int sourceOffset = 0;
+                int writePos = writePosition;
 
-                if (numSamples <= space)
+                while (samplesRemaining > 0)
                 {
-                    //   SCRITTURA IN UN BLOCCO (veloce)
-                    delayBuffer.copyFrom(ch, writePosition, drySignal, ch, 0, numSamples);
-                }
-                else
-                {
-                    //   SCRITTURA IN DUE BLOCCHI per wrap-around
-                    delayBuffer.copyFrom(ch, writePosition, drySignal, ch, 0, space);
-                    delayBuffer.copyFrom(ch, 0, drySignal, ch, space, numSamples - space);
+                    // Calcola quanti samples possiamo scrivere prima del wrap
+                    int samplesUntilWrap = delayBufferSize - writePos;
+                    int samplesToWrite = juce::jmin(samplesRemaining, samplesUntilWrap);
+
+                    // VERIFICA: bounds check esplicito
+                    jassert(writePos >= 0 && writePos < delayBufferSize);
+                    jassert(samplesToWrite > 0 && samplesToWrite <= delayBufferSize);
+                    jassert(sourceOffset >= 0 && sourceOffset + samplesToWrite <= numSamples);
+
+                    // Scrivi il chunk
+                    delayBuffer.copyFrom(ch, writePos, drySignal, ch, sourceOffset, samplesToWrite);
+
+                    // Avanza i puntatori
+                    samplesRemaining -= samplesToWrite;
+                    sourceOffset += samplesToWrite;
+                    writePos = (writePos + samplesToWrite) % delayBufferSize;
                 }
 
-                // 2. LEGGI con copyFrom (ottimizzato SIMD)
-                const int readStart = (writePosition - delaySamples + delayBufferSize) % delayBufferSize;
+                // ═════════════════════════════════════════════════════════════
+                // 2. LEGGI dal circular buffer (con delay compensation)
+                // ═════════════════════════════════════════════════════════════
+                samplesRemaining = numSamples;
+                int destOffset = 0;
 
-                if (readStart + numSamples <= delayBufferSize)
+                // Calcola read position con modulo sicuro
+                int readPos = (writePosition - delaySamples + delayBufferSize) % delayBufferSize;
+
+                // VERIFICA: read position valida
+                jassert(readPos >= 0 && readPos < delayBufferSize);
+
+                while (samplesRemaining > 0)
                 {
-                    //   LETTURA IN UN BLOCCO (veloce)
-                    drySignal.copyFrom(ch, 0, delayBuffer, ch, readStart, numSamples);
-                }
-                else
-                {
-                    //   LETTURA IN DUE BLOCCHI per wrap-around
-                    const int samplesBeforeWrap = delayBufferSize - readStart;
-                    drySignal.copyFrom(ch, 0, delayBuffer, ch, readStart, samplesBeforeWrap);
-                    drySignal.copyFrom(ch, samplesBeforeWrap, delayBuffer, ch, 0, numSamples - samplesBeforeWrap);
+                    // Calcola quanti samples possiamo leggere prima del wrap
+                    int samplesUntilWrap = delayBufferSize - readPos;
+                    int samplesToRead = juce::jmin(samplesRemaining, samplesUntilWrap);
+
+                    // VERIFICA: bounds check esplicito
+                    jassert(readPos >= 0 && readPos < delayBufferSize);
+                    jassert(samplesToRead > 0 && samplesToRead <= delayBufferSize);
+                    jassert(destOffset >= 0 && destOffset + samplesToRead <= numSamples);
+
+                    // Leggi il chunk
+                    drySignal.copyFrom(ch, destOffset, delayBuffer, ch, readPos, samplesToRead);
+
+                    // Avanza i puntatori
+                    samplesRemaining -= samplesToRead;
+                    destOffset += samplesToRead;
+                    readPos = (readPos + samplesToRead) % delayBufferSize;
                 }
             }
 
+            // 3. Aggiorna write position per il prossimo blocco
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
-        for (int ch = 0; ch < numChannels; ++ch)  //   LOOP PER CANALE, NON SAMPLE
-        {
-            //   CONTROLLA SE C'È SMOOTHING ATTIVO
-            if (dryLevel.isSmoothing() || wetLevel.isSmoothing())
-            {
-                // Smoothing attivo - usa loop (necessario)
-                auto* dryData = drySignal.getWritePointer(ch);  //   PUNTATORI DIRETTI
-                auto* wetData = wetBuffer.getWritePointer(ch);
 
-                for (int i = 0; i < numSamples; ++i)
+        // ═══════════════════════════════════════════════════════════════
+        // DRY/WET MIXING
+        // ═══════════════════════════════════════════════════════════════
+        if (dryLevel.isSmoothing() || wetLevel.isSmoothing())
+        {
+            // FIX ZIPPER NOISE: Smoothing attivo: loop SAMPLE-first
+            // Questo garantisce che getNextValue() sia chiamato una volta per sample,
+            // non una volta per sample per channel (che causerebbe zipper noise)
+            for (int i = 0; i < numSamples; ++i)
+            {
+                float dryGain = dryLevel.getNextValue();
+                float wetGain = wetLevel.getNextValue();
+
+                for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    float dryGain = dryLevel.getNextValue();
-                    float wetGain = wetLevel.getNextValue();
-                    wetData[i] = dryData[i] * dryGain + wetData[i] * wetGain;  //   ACCESSO ARRAY
+                    float dry = drySignal.getSample(ch, i) * dryGain;
+                    float wet = wetBuffer.getSample(ch, i) * wetGain;
+                    wetBuffer.setSample(ch, i, dry + wet);
                 }
             }
-            else
-            {
-                //   VALORI STABILI - usa operazioni vettoriali (MOLTO PIÙ VELOCE)
-                float dryGain = dryLevel.getCurrentValue();  //   UNA SOLA CHIAMATA
-                float wetGain = wetLevel.getCurrentValue();
+        }
+        else
+        {
+            // Nessun smoothing: operazioni vettoriali
+            float dryGain = dryLevel.getCurrentValue();
+            float wetGain = wetLevel.getCurrentValue();
 
-                //   OPERAZIONI VETTORIALI OTTIMIZZATE JUCE
-                wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
                 wetBuffer.applyGain(ch, 0, numSamples, wetGain);
+                wetBuffer.addFrom(ch, 0, drySignal, ch, 0, numSamples, dryGain);
             }
         }
     }
+
 
     void setDryLevel(float value) { dryLevel.setTargetValue(value); }
     void setWetLevel(float value) { wetLevel.setTargetValue(value); }
     void setDelaySamples(int samples)
     {
-        delaySamples = juce::jlimit(0, delayBuffer.getNumSamples() - 1, samples);
+        // CONTROLLO SICUREZZA: non superare mai la dimensione del buffer
+        int maxAllowedDelay = delayBuffer.getNumSamples() - 1;
+
+        if (samples > maxAllowedDelay)
+        {
+            // Usa il massimo possibile senza crashare
+            delaySamples = maxAllowedDelay;
+        }
+        else
+        {
+            delaySamples = juce::jlimit(0, maxAllowedDelay, samples);
+        }
     }
 
 private:
