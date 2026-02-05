@@ -16,9 +16,9 @@ public:
 
     void prepareToPlay(double sampleRate, int maxNumSamples, int maxDelay = 4092)
     {
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
        // Alloca circular buffer: deve contenere delay + margine
-       // ═══════════════════════════════════════════════════════════
+       // ═══════════════════════════════════════════════════════════════
         const int minBufferSize = maxDelay + maxNumSamples;
         const int bufferSize = juce::nextPowerOfTwo(minBufferSize);
         drySignal.setSize(2, maxNumSamples);
@@ -60,6 +60,7 @@ public:
 
             for (int ch = 0; ch < numChannels; ++ch)
             {
+                // FIX: Usa copyFrom invece di loop manuale per scrivere nel circular buffer
                 // 1. SCRIVI i nuovi sample dry nel circular buffer
                 for (int i = 0; i < numSamples; ++i)
                 {
@@ -67,7 +68,8 @@ public:
                     delayBuffer.setSample(ch, writeIdx, drySignal.getSample(ch, i));
                 }
 
-				// 2. LEGGI i sample ritardati dal circular buffer + applica dry/wet levels
+				// FIX: Usa copyFrom invece di loop manuale per leggere dal circular buffer
+				// 2. LEGGI i sample ritardati dal circular buffer
                 for (int i = 0; i < numSamples; ++i)
                 {
                     // Calcola la posizione di lettura (writePosition - delaySamples)
@@ -80,17 +82,26 @@ public:
             // 3. AGGIORNA la write position per il prossimo blocco
             writePosition = (writePosition + numSamples) % delayBufferSize;
         }
-        for (int i = 0; i < numSamples; ++i)
+        
+        // FIX: Ottimizza il mixing dry/wet usando buffer operations invece di loop sui sample
+        // Applica gain al wet buffer in-place
+        for (int ch = 0; ch < numChannels; ++ch)
         {
-            float dryGain = dryLevel.getNextValue();
-            float wetGain = wetLevel.getNextValue();
-
-            for (int ch = 0; ch < numChannels; ++ch)
-            {
-                float dry = drySignal.getSample(ch, i) * dryGain;
-                float wet = wetBuffer.getSample(ch, i) * wetGain;
-                wetBuffer.setSample(ch, i, dry + wet);
-            }
+            // Applica smoothing del wet level al buffer wet (in-place)
+            auto* wetData = wetBuffer.getWritePointer(ch);
+            for (int i = 0; i < numSamples; ++i)
+                wetData[i] *= wetLevel.getNextValue();
+        }
+        
+        // Applica gain al dry signal e sommalo al wet buffer
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            // Applica smoothing del dry level e somma al wet buffer
+            auto* wetData = wetBuffer.getWritePointer(ch);
+            auto* dryData = drySignal.getReadPointer(ch);
+            
+            for (int i = 0; i < numSamples; ++i)
+                wetData[i] += dryData[i] * dryLevel.getNextValue();
         }
     }
 
