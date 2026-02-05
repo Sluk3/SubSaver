@@ -38,8 +38,8 @@ namespace Parameters
         std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
         params.push_back(std::make_unique<AudioParameterFloat>(nameDryLevel, "Dry Level", 0.0f, 1.0f, defaultDryLevel));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameWetLevel, "Wet Level", 0.0f, 0.70f, defaultWetLevel));
-        params.push_back(std::make_unique<AudioParameterFloat>(nameDrive, "Drive", NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDrive));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameWetLevel, "Wet Level", 0.0f, 0.90f, defaultWetLevel));
+        params.push_back(std::make_unique<AudioParameterFloat>(nameDrive, "Drive", NormalisableRange<float>(0.0f, 12.0f, 0.001f, 0.3f), defaultDrive));
         params.push_back(std::make_unique<AudioParameterFloat>(nameStereoWidth, "Stereo Width", 0.0f, 0.25f, defaultStereoWidth));
         params.push_back(std::make_unique<AudioParameterFloat>(nameEnvAmount, "Env Amount", 0.0f, 1.0f, defaultEnvAmount));
         params.push_back(std::make_unique<AudioParameterChoice>(nameShapeMode, "Waveshaping Mode", StringArray{ "A", "B", "C", "D" }, defaultShapeMode));

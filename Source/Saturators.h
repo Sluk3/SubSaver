@@ -211,7 +211,7 @@ private:
     static float foldback(float x)
     {
         constexpr float threshold = 0.25f; // Soglia di folding
-
+        constexpr float gainComp = 1.0f / threshold; 
 
         // Hard folding (riflessione geometrica)
         while (x > threshold || x < -threshold)
@@ -222,7 +222,7 @@ private:
                 x = -threshold + (-threshold - x);
         }
 
-        return x;
+        return x * gainComp; // <-- GAIN COMPENSATION
     }
     
     // ═══════════════════════════════════════════════════════════════
