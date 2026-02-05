@@ -322,6 +322,9 @@ void SubSaverAudioProcessorEditor::resized()
         buttonWidth,
         buttonHeight
     );
+    
+    // Forza il bottone in primo piano per renderlo sempre cliccabile
+    oversamplingToggle.toFront(false);
 }
 
 
