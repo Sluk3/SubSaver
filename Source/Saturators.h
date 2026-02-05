@@ -50,7 +50,9 @@ public:
 
         maxSamplesPerBlock = samplesPerBlock;
         originalSampleRate = sampleRate;
-        resetOversampler();
+        
+        // FIX: Inizializza ENTRAMBI gli oversampler
+        initOversamplers(samplesPerBlock);
     }
 
     void setWaveshapeType(WaveshapeType type)
@@ -64,19 +66,20 @@ public:
 
     void setOversampling(bool shouldOversample)
     {
-        if (oversampling == shouldOversample)
-            return;
         oversampling = shouldOversample;
-        needsOversamplerReset = true;
+        // FIX: NESSUN RESET - solo switch tra istanze già pronte
     }
 
     void setDrive(double value) { drive.setTargetValue(value); }
     void setStereoWidth(float width) { stereoWidth.setTargetValue(width); }
 
+    // FIX: Ritorna latenza dell'istanza attualmente attiva
     int getLatencySamples() const noexcept
     {
-        if (oversampler)
-            return static_cast<int>(oversampler->getLatencyInSamples());
+        if (oversampling && oversamplerHigh)  // SELEZIONA L'ISTANZA CORRETTA
+            return static_cast<int>(oversamplerHigh->getLatencyInSamples());
+        else if (oversamplerBypass)  // ISTANZA BYPASS
+            return static_cast<int>(oversamplerBypass->getLatencyInSamples());
         return 0;
     }
 
@@ -86,11 +89,11 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer,
         const juce::AudioBuffer<double>& envelopeBuffer)
     {
-        if (needsOversamplerReset)
-        {
-            resetOversampler();
-            needsOversamplerReset = false;
-        }
+        // FIX: NESSUN RESET RUNTIME
+        
+        // FIX: SELEZIONE ISTANZA CORRETTA
+        auto* activeOversampler = oversampling ? oversamplerHigh.get() : oversamplerBypass.get();
+        const int activeFactor = oversampling ? oversamplingFactorHigh : 1;
 
         const int numChannels = buffer.getNumChannels();
         const int numSamples = buffer.getNumSamples();
@@ -101,7 +104,7 @@ public:
         // ═══════════════════════════════════════════════════════
         juce::dsp::AudioBlock<float> block(buffer);
         juce::dsp::ProcessContextReplacing<float> context(block);
-        auto oversampledBlock = oversampler->processSamplesUp(context.getInputBlock());
+        auto oversampledBlock = activeOversampler->processSamplesUp(context.getInputBlock());  // USA ISTANZA ATTIVA
 
         const size_t numOversampledChannels = oversampledBlock.getNumChannels();
         const size_t numOversampledSamples = oversampledBlock.getNumSamples();
@@ -112,7 +115,7 @@ public:
         for (size_t sample = 0; sample < numOversampledSamples; ++sample)
         {
             // Map sample index to native rate envelope
-            size_t nativeIndex = sample / oversamplingFactor;
+            size_t nativeIndex = sample / activeFactor;  // USA FATTORE CORRETTO
             if (nativeIndex >= envelopeBuffer.getNumSamples())
                 nativeIndex = envelopeBuffer.getNumSamples() - 1;
 
@@ -147,7 +150,7 @@ public:
         // ═══════════════════════════════════════════════════════
         // OVERSAMPLING DOWN
         // ═══════════════════════════════════════════════════════
-        oversampler->processSamplesDown(context.getOutputBlock());
+        activeOversampler->processSamplesDown(context.getOutputBlock());
 
         // ═══════════════════════════════════════════════════════
         // DC BLOCKER + GAIN COMP (native rate)
@@ -260,25 +263,32 @@ private:
     }
 
     // ═══════════════════════════════════════════════════════════
-    // OVERSAMPLER MANAGEMENT
+    // FIX: OVERSAMPLER INITIALIZATION (DUAL INSTANCES)
     // ═══════════════════════════════════════════════════════════
-    void resetOversampler()
+    void initOversamplers(int samplesPerBlock)
     {
-        oversamplingFactor = oversampling
-            ? static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate)
-            : 1;
-        oversamplingFactor = juce::jmin(16, juce::jmax(1, oversamplingFactor));
-
-        oversampler = std::make_unique<juce::dsp::Oversampling<float>>(
+        // NUOVO: Oversampler bypass (1x, mantiene latenza coerente)
+        oversamplerBypass = std::make_unique<juce::dsp::Oversampling<float>>(
             2, // stereo
-            static_cast<size_t>(std::log2(oversamplingFactor)),
+            0, // 2^0 = 1x (nessun oversampling)
             juce::dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR,
-            true, // normalisedFilters
-            true  // integerLatency
+            true,
+            true
         );
+        oversamplerBypass->initProcessing(static_cast<size_t>(samplesPerBlock));
 
-        if (oversampler)
-            oversampler->initProcessing(static_cast<size_t>(maxSamplesPerBlock));
+        // NUOVO: Oversampler high quality (4x+)
+        oversamplingFactorHigh = static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate);
+        oversamplingFactorHigh = juce::jmin(16, juce::jmax(1, oversamplingFactorHigh));
+
+        oversamplerHigh = std::make_unique<juce::dsp::Oversampling<float>>(
+            2,
+            static_cast<size_t>(std::log2(oversamplingFactorHigh)),  // FATTORE ALTO
+            juce::dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR,
+            true,
+            true
+        );
+        oversamplerHigh->initProcessing(static_cast<size_t>(samplesPerBlock));
     }
 
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> drive;
@@ -287,13 +297,14 @@ private:
 
     WaveshapeType currentType;
     bool oversampling;
-    bool needsOversamplerReset = false;
 
     double originalSampleRate = 0.0;
     int maxSamplesPerBlock = 0;
-    int oversamplingFactor = 1;
+    int oversamplingFactorHigh = 1;  // FIX: fattore per high quality
 
-    std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
+    // FIX: DUE ISTANZE SEPARATE
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplerBypass;  // (1x)
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplerHigh;    // (4x+)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveshaperCore)
 };
