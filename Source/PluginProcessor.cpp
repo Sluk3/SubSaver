@@ -51,8 +51,7 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     
     // Comunica la latenza all'host
     setLatencySamples(totalLatency);
-    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, totalLatency);
-
+    dryWetter.prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), totalLatency);
 }
 
 void SubSaverAudioProcessor::releaseResources()
@@ -135,14 +134,14 @@ void SubSaverAudioProcessor::parameterChanged(const juce::String& parameterID, f
         tiltFilterPost.setTiltAmount(-newValue);
     }
     else if (parameterID == Parameters::nameOversampling) {
-		waveshaper.setOversampling(static_cast<bool>(newValue));
-		
-		// FIX: Ricalcola la latenza totale e aggiorna l'host
-		int newLatency = calculateTotalLatency(getSampleRate());
-		setLatencySamples(newLatency);  // setLatencySamples già chiama updateHostDisplay
+        waveshaper.setOversampling(static_cast<bool>(newValue));
+        // Ricalcola la latenza totale e aggiorna l'host
+        int newLatency = calculateTotalLatency(getSampleRate());
+        setLatencySamples(newLatency);
 
-		// FIX: Aggiorna anche il dryWetter con la nuova latenza
-		dryWetter.setDelaySamples(newLatency);
+        // Aggiorna anche il dryWetter con la nuova latenza
+        dryWetter.setDelaySamples(newLatency);
+    
     }else if(parameterID == Parameters::nameShapeMode){
         waveshaper.setWaveshapeType(static_cast<WaveshapeType>(static_cast<int>(newValue)));
 	}
