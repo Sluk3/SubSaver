@@ -267,10 +267,10 @@ void SubSaverAudioProcessorEditor::resized()
 
     centerArea.removeFromTop(15);
 
-    // Distortion Type slider - MARGINI ORIZZONTALI RIDOTTI
+    // Distortion Type slider - MARGINI AUMENTATI per evitare clipping del thumb
     auto sliderArea = centerArea.removeFromTop(80);
     shapeModeLabel.setBounds(sliderArea.removeFromTop(22));
-    shapeModeSlider.setBounds(sliderArea.reduced(10, 10));
+    shapeModeSlider.setBounds(sliderArea.reduced(15, 12));
 
     // ═══════════════════════════════════════════════════════════
     // LOGO BAND - skip (Y: 350-400)
@@ -288,10 +288,10 @@ void SubSaverAudioProcessorEditor::resized()
 
     lowerSection.removeFromTop(10);
 
-    // Frequency slider
+    // Frequency slider - MARGINE VERTICALE AUMENTATO per evitare clipping del thumb
     auto freqSliderArea = lowerSection.removeFromTop(60);
     disperserFreqLabel.setBounds(freqSliderArea.removeFromTop(20));
-    disperserFreqSlider.setBounds(freqSliderArea.reduced(15, 8));
+    disperserFreqSlider.setBounds(freqSliderArea.reduced(18, 12));
 
     lowerSection.removeFromTop(15);
 
