@@ -210,7 +210,7 @@ private:
 // ═══════════════════════════════════════════════════════════════
     static float foldback(float x)
     {
-        constexpr float threshold = 0.8f; // Soglia di folding
+        constexpr float threshold = 0.25f; // Soglia di folding
 
 
         // Hard folding (riflessione geometrica)
@@ -236,7 +236,7 @@ private:
     static float triangleWavefolder(float x)
     {
         // Formula Stanford (period = 2, range [-1, 1])
-        constexpr float period = 2.0f;
+        constexpr float period = 1.0f;
 
         // Calcola la fase normalizzata
         float phase = x / period;
