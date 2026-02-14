@@ -26,11 +26,11 @@ public:
         : drive(defaultDrive),
         stereoWidth(defaultStereoWidth),
         oversampling(defaultOversampling),
-        morphValue(0.0f)  // NUOVO: inizializza a 0 (Chebyshev)
+        morphValue(0.0f)
     {
         drive.setCurrentAndTargetValue(defaultDrive);
         stereoWidth.setCurrentAndTargetValue(defaultStereoWidth);
-        morphValue.setCurrentAndTargetValue(0.0f);  // NUOVO
+        morphValue.setCurrentAndTargetValue(0.0f);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -40,7 +40,7 @@ public:
     {
         drive.reset(sampleRate, 0.03);
         stereoWidth.reset(sampleRate, 0.03);
-        morphValue.reset(sampleRate, 0.03);  // NUOVO: smoothing 30ms
+        morphValue.reset(sampleRate, 0.03);
 
         // DC blocker (HPF 5-7.5Hz)
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.5);
@@ -53,7 +53,6 @@ public:
         maxSamplesPerBlock = samplesPerBlock;
         originalSampleRate = sampleRate;
         
-        // FIX: Inizializza ENTRAMBI gli oversampler
         initOversamplers(samplesPerBlock);
     }
 
@@ -65,18 +64,16 @@ public:
     void setOversampling(bool shouldOversample)
     {
         oversampling = shouldOversample;
-        // FIX: NESSUN RESET - solo switch tra istanze già pronte
     }
 
     void setDrive(double value) { drive.setTargetValue(value); }
     void setStereoWidth(float width) { stereoWidth.setTargetValue(width); }
 
-    // FIX: Ritorna latenza dell'istanza attualmente attiva
     int getLatencySamples() const noexcept
     {
-        if (oversampling && oversamplerHigh)  // SELEZIONA L'ISTANZA CORRETTA
+        if (oversampling && oversamplerHigh)
             return static_cast<int>(oversamplerHigh->getLatencyInSamples());
-        else if (oversamplerBypass)  // ISTANZA BYPASS
+        else if (oversamplerBypass)
             return static_cast<int>(oversamplerBypass->getLatencyInSamples());
         return 0;
     }
@@ -87,9 +84,6 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer,
         const juce::AudioBuffer<double>& envelopeBuffer)
     {
-        // FIX: NESSUN RESET RUNTIME
-        
-        // FIX: SELEZIONE ISTANZA CORRETTA
         auto* activeOversampler = oversampling ? oversamplerHigh.get() : oversamplerBypass.get();
         const int activeFactor = oversampling ? oversamplingFactorHigh : 1;
 
@@ -98,11 +92,19 @@ public:
         auto envData = envelopeBuffer.getReadPointer(0);
 
         // ═══════════════════════════════════════════════════════
+        // FIX: Determina se il morph è in fase di smoothing
+        // Se stabile → campiona una volta (elimina DC artifacts)
+        // Se in transizione → aggiorna ad ogni sample (smooth)
+        // ═══════════════════════════════════════════════════════
+        const bool morphIsSmoothing = morphValue.isSmoothing();
+        float currentMorphValue = morphIsSmoothing ? 0.0f : morphValue.getCurrentValue();
+
+        // ═══════════════════════════════════════════════════════
         // OVERSAMPLING UP
         // ═══════════════════════════════════════════════════════
         juce::dsp::AudioBlock<float> block(buffer);
         juce::dsp::ProcessContextReplacing<float> context(block);
-        auto oversampledBlock = activeOversampler->processSamplesUp(context.getInputBlock());  // USA ISTANZA ATTIVA
+        auto oversampledBlock = activeOversampler->processSamplesUp(context.getInputBlock());
 
         const size_t numOversampledChannels = oversampledBlock.getNumChannels();
         const size_t numOversampledSamples = oversampledBlock.getNumSamples();
@@ -112,8 +114,12 @@ public:
         // ═══════════════════════════════════════════════════════
         for (size_t sample = 0; sample < numOversampledSamples; ++sample)
         {
+            // FIX: Aggiorna morphValue solo se in smoothing
+            if (morphIsSmoothing)
+                currentMorphValue = morphValue.getNextValue();
+
             // Map sample index to native rate envelope
-            size_t nativeIndex = sample / activeFactor;  // USA FATTORE CORRETTO
+            size_t nativeIndex = sample / activeFactor;
             if (nativeIndex >= envelopeBuffer.getNumSamples())
                 nativeIndex = envelopeBuffer.getNumSamples() - 1;
 
@@ -140,8 +146,8 @@ public:
                 // 3. Modulate with envelope
                 driven *= env;
 
-                // 4. Apply waveshaping (type-dependent)
-                dataPtr[sample] = applyWaveshaping(driven);
+                // 4. Apply waveshaping (passa morph come parametro)
+                dataPtr[sample] = applyWaveshaping(driven, currentMorphValue);
             }
         }
 
@@ -168,10 +174,8 @@ private:
     // ═══════════════════════════════════════════════════════════
     // WAVESHAPING FUNCTIONS (TYPE-SPECIFIC)
     // ═══════════════════════════════════════════════════════════
-    float applyWaveshaping(float x)
+    float applyWaveshaping(float x, float morph)  // FIX: riceve morph come parametro
     {
-        float morph = morphValue.getNextValue();
-
         // Calcola tutte e 4 le funzioni
         float shape0 = chebyshevPoly(x);      // 0.0
         float shape1 = sineFold(x);           // 1.0
@@ -182,19 +186,19 @@ private:
         if (morph < 1.0f)
         {
             // Morph tra Chebyshev (0) e SineFold (1)
-            float blend = morph;  // 0.0 - 1.0
+            float blend = morph;
             return shape0 * (1.0f - blend) + shape1 * blend;
         }
         else if (morph < 2.0f)
         {
             // Morph tra SineFold (1) e Triangle (2)
-            float blend = morph - 1.0f;  // 0.0 - 1.0
+            float blend = morph - 1.0f;
             return shape1 * (1.0f - blend) + shape2 * blend;
         }
         else
         {
             // Morph tra Triangle (2) e Foldback (3)
-            float blend = morph - 2.0f;  // 0.0 - 1.0
+            float blend = morph - 2.0f;
             return shape2 * (1.0f - blend) + shape3 * blend;
         }
     }
@@ -231,7 +235,7 @@ private:
                 x = -threshold + (-threshold - x);
         }
 
-        return x * gainComp; // <-- GAIN COMPENSATION
+        return x * gainComp;
     }
     
     // ═══════════════════════════════════════════════════════════════
@@ -244,7 +248,6 @@ private:
 // ═══════════════════════════════════════════════════════════════
     static float triangleWavefolder(float x)
     {
-        // Formula Stanford (period = 2, range [-1, 1])
         constexpr float period = 1.0f;
 
         // Calcola la fase normalizzata
@@ -272,11 +275,11 @@ private:
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FIX: OVERSAMPLER INITIALIZATION (DUAL INSTANCES)
+    // OVERSAMPLER INITIALIZATION (DUAL INSTANCES)
     // ═══════════════════════════════════════════════════════════
     void initOversamplers(int samplesPerBlock)
     {
-        // NUOVO: Oversampler bypass (1x, mantiene latenza coerente)
+        // Oversampler bypass (1x, mantiene latenza coerente)
         oversamplerBypass = std::make_unique<juce::dsp::Oversampling<float>>(
             2, // stereo
             0, // 2^0 = 1x (nessun oversampling)
@@ -286,13 +289,13 @@ private:
         );
         oversamplerBypass->initProcessing(static_cast<size_t>(samplesPerBlock));
 
-        // NUOVO: Oversampler high quality (4x+)
+        // Oversampler high quality (4x+)
         oversamplingFactorHigh = static_cast<int>(TARGET_SAMPLING_RATE / originalSampleRate);
         oversamplingFactorHigh = juce::jmin(16, juce::jmax(1, oversamplingFactorHigh));
 
         oversamplerHigh = std::make_unique<juce::dsp::Oversampling<float>>(
             2,
-            static_cast<size_t>(std::log2(oversamplingFactorHigh)),  // FATTORE ALTO
+            static_cast<size_t>(std::log2(oversamplingFactorHigh)),
             juce::dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR,
             true,
             true
@@ -310,11 +313,10 @@ private:
 
     double originalSampleRate = 0.0;
     int maxSamplesPerBlock = 0;
-    int oversamplingFactorHigh = 1;  // FIX: fattore per high quality
+    int oversamplingFactorHigh = 1;
 
-    // FIX: DUE ISTANZE SEPARATE
-    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplerBypass;  // (1x)
-    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplerHigh;    // (4x+)
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplerBypass;
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplerHigh;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveshaperCore)
 };
