@@ -135,6 +135,28 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     setupLabel(disperserFreqLabel, "Frequency");
     setupLabel(disperserPinchLabel, "Pinch");
 
+    // Label per mostrare il valore della frequenza
+    disperserFreqValueLabel.setJustificationType(juce::Justification::centred);
+    disperserFreqValueLabel.setFont(juce::Font(montserratFont).withHeight(14.0f));
+    disperserFreqValueLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
+    addAndMakeVisible(disperserFreqValueLabel);
+
+    // Listener per aggiornare la label quando lo slider cambia
+    disperserFreqSlider.onValueChange = [this]() {
+        float freq = disperserFreqSlider.getValue();
+        juce::String freqText;
+        
+        if (freq >= 1000.0f)
+            freqText = juce::String(freq / 1000.0f, 2) + " kHz";
+        else
+            freqText = juce::String((int)freq) + " Hz";
+        
+        disperserFreqValueLabel.setText(freqText, juce::dontSendNotification);
+    };
+
+    // Inizializza il valore della label
+    disperserFreqSlider.onValueChange();
+
     // Title label per la sezione disperser
     disperserTitleLabel.setText("DISPERSER", juce::dontSendNotification);
     disperserTitleLabel.setJustificationType(juce::Justification::centred);
@@ -288,10 +310,11 @@ void SubSaverAudioProcessorEditor::resized()
 
     lowerSection.removeFromTop(10);
 
-    // Frequency slider - Margini ridotti per dare spazio verticale al thumb
-    auto freqSliderArea = lowerSection.removeFromTop(60);
+    // Frequency slider - Aumentato spazio verticale per la label del valore
+    auto freqSliderArea = lowerSection.removeFromTop(80);  // Aumentato da 60 a 80
     disperserFreqLabel.setBounds(freqSliderArea.removeFromTop(20));
-    disperserFreqSlider.setBounds(freqSliderArea.reduced(10, 3));
+    disperserFreqSlider.setBounds(freqSliderArea.removeFromTop(37).reduced(10, 3));
+    disperserFreqValueLabel.setBounds(freqSliderArea.removeFromTop(18));  // Label del valore
 
     lowerSection.removeFromTop(15);
 
