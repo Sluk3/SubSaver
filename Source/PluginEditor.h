@@ -49,6 +49,7 @@ private:
 
     juce::Label disperserAmountLabel;
     juce::Label disperserFreqLabel;
+    juce::Label disperserFreqValueLabel;  // Mostra il valore della frequenza
     juce::Label disperserPinchLabel;
     juce::Label disperserTitleLabel;
     juce::Label distortionTitleLabel;
