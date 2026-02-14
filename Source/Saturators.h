@@ -40,7 +40,7 @@ public:
     {
         drive.reset(sampleRate, 0.03);
         stereoWidth.reset(sampleRate, 0.03);
-        morphValue.reset(sampleRate, 0.03);
+        morphValue.reset(sampleRate, 0.25);  // FIX: 250ms smoothing (era 0.03)
 
         // DC blocker (HPF 5-7.5Hz)
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.5);
