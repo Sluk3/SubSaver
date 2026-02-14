@@ -40,7 +40,7 @@ public:
     {
         drive.reset(sampleRate, 0.03);
         stereoWidth.reset(sampleRate, 0.03);
-        morphValue.reset(sampleRate, 0.25);  // FIX: 250ms smoothing (era 0.03)
+        morphValue.reset(sampleRate, 0.25);  // 250ms smoothing
 
         // DC blocker (HPF 5-7.5Hz)
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 7.5);
@@ -94,7 +94,7 @@ public:
         // ═══════════════════════════════════════════════════════
         // FIX: Determina se il morph è in fase di smoothing
         // Se stabile → campiona una volta (elimina DC artifacts)
-        // Se in transizione → aggiorna ad ogni sample (smooth)
+        // Se in transizione → aggiorna alla frequenza NATIVA (non oversampliata)
         // ═══════════════════════════════════════════════════════
         const bool morphIsSmoothing = morphValue.isSmoothing();
         float currentMorphValue = morphIsSmoothing ? 0.0f : morphValue.getCurrentValue();
@@ -114,8 +114,9 @@ public:
         // ═══════════════════════════════════════════════════════
         for (size_t sample = 0; sample < numOversampledSamples; ++sample)
         {
-            // FIX: Aggiorna morphValue solo se in smoothing
-            if (morphIsSmoothing)
+            // FIX: Aggiorna morphValue solo ai sample nativi (non oversampliati)
+            // Con oversampling 4x: aggiorna solo ogni 4 sample (0, 4, 8, 12...)
+            if (morphIsSmoothing && (sample % activeFactor == 0))
                 currentMorphValue = morphValue.getNextValue();
 
             // Map sample index to native rate envelope
@@ -174,7 +175,7 @@ private:
     // ═══════════════════════════════════════════════════════════
     // WAVESHAPING FUNCTIONS (TYPE-SPECIFIC)
     // ═══════════════════════════════════════════════════════════
-    float applyWaveshaping(float x, float morph)  // FIX: riceve morph come parametro
+    float applyWaveshaping(float x, float morph)
     {
         // Calcola tutte e 4 le funzioni
         float shape0 = chebyshevPoly(x);      // 0.0
