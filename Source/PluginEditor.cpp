@@ -249,13 +249,13 @@ void SubSaverAudioProcessorEditor::resized()
 
     upperSection.removeFromTop(3);
 
-    // Dry slider (left)
-    auto dryArea = upperSection.removeFromLeft(60).reduced(8, 15);
+    // Dry slider (left) - ALLARGATA per evitare ellisse su Mac
+    auto dryArea = upperSection.removeFromLeft(70).reduced(8, 15);
     dryLabel.setBounds(dryArea.removeFromBottom(20));
     drySlider.setBounds(dryArea);
 
-    // Wet slider (right) - AUMENTATA LARGHEZZA
-    auto wetArea = upperSection.removeFromRight(65).reduced(8, 15);
+    // Wet slider (right) - ALLARGATA per evitare ellisse su Mac
+    auto wetArea = upperSection.removeFromRight(75).reduced(8, 15);
     wetLabel.setBounds(wetArea.removeFromBottom(20));
     wetSlider.setBounds(wetArea);
 
