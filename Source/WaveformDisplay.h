@@ -57,7 +57,7 @@ public:
 
         const int   numPoints = 300;
         const float currentMorph = morph.load();
-        const float currentDrive = juce::jmin(drive.load(), 8.0f); // clamp visivo
+        const float currentDrive = drive.load();
 
         // ── Sine di riferimento (tratteggiata, bianca) ─────────────────
         {
@@ -94,7 +94,7 @@ public:
             }
             g.setColour(juce::Colour(0xffff3333));
             g.strokePath(distPath, juce::PathStrokeType(
-                1.8f,
+                1.0f,
                 juce::PathStrokeType::curved,
                 juce::PathStrokeType::rounded));
         }
