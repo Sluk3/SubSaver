@@ -3,7 +3,7 @@
 
 
 SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p)
+    : AudioProcessorEditor(&p), audioProcessor(p), waveformDisplay(p.parameters)
 {
     setLookAndFeel(&customLookAndFeel);
     // ═══════════════════════════════════════════════════════════
@@ -83,7 +83,7 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
 
     // Horizontal slider
     setupHorizontalSlider(shapeModeSlider);
-    shapeModeSlider.setRange(0, 3, 1);
+    shapeModeSlider.setRange(0, 3);
     shapeModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, Parameters::nameMorph, shapeModeSlider);
 
@@ -164,10 +164,12 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
     disperserTitleLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.8f));
     addAndMakeVisible(disperserTitleLabel);
 
+    addAndMakeVisible(waveformDisplay);
+
     // ═══════════════════════════════════════════════════════════
     // SIZE
     // ═══════════════════════════════════════════════════════════
-    setSize(330, 660);
+    setSize(330, 725);
 }
 
 
@@ -180,32 +182,26 @@ SubSaverAudioProcessorEditor::~SubSaverAudioProcessorEditor()
 void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
 {
     // ═══════════════════════════════════════════════════════════
-    // UPPER SECTION (RED/BURGUNDY) - AUMENTATA a 350px
+    // UPPER SECTION (RED/BURGUNDY)
     // ═══════════════════════════════════════════════════════════
-    auto upperBounds = getLocalBounds().removeFromTop(350);  // Era 320, ora 350
+    auto upperBounds = getLocalBounds().removeFromTop(415); 
 
     g.setGradientFill(juce::ColourGradient(
         juce::Colour(0xff4a0f0f), 0, 0,
-        juce::Colour(0xff1f1c1c), 0, 350,  // Era 320, ora 350
+        juce::Colour(0xff1f1c1c), 0, 415,
         false));
     g.fillRect(upperBounds);
 
     // ═══════════════════════════════════════════════════════════
-    // LOGO BAND (GREY) - 50px SPOSTATA PIÙ IN BASSO
+    // LOGO BAND (GREY)
     // ═══════════════════════════════════════════════════════════
-    auto logoBand = getLocalBounds().withY(350).withHeight(50);  // Era Y:320, ora Y:350
+    auto logoBand = getLocalBounds().withY(415).withHeight(50); 
 
     g.setGradientFill(juce::ColourGradient(
-        juce::Colour(0xff2a2a2a), 0, 350,  // Era 320, ora 350
-        juce::Colour(0xff1a1a1a), 0, 400,  // Era 370, ora 400
+        juce::Colour(0xff2a2a2a), 0, 415,
+        juce::Colour(0xff1a1a1a), 0, 465,  
         false));
     g.fillRect(logoBand);
-
-    // Bordi
-    g.setColour(juce::Colour(0xff0a0a0a));
-    g.drawLine(0, 350, getWidth(), 350, 2.0f);  // Era 320, ora 350
-    g.setColour(juce::Colour(0xff0a0a0a));
-    g.drawLine(0, 400, getWidth(), 400, 2.0f);  // Era 370, ora 400
 
     // Logo image
     if (logoImage.isValid())
@@ -224,10 +220,10 @@ void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)
     // ═══════════════════════════════════════════════════════════
     // LOWER SECTION (BLUE/SLATE) - Disperser
     // ═══════════════════════════════════════════════════════════
-    auto lowerBounds = getLocalBounds().withY(400).withHeight(getHeight() - 400);  // Era 370, ora 400
+    auto lowerBounds = getLocalBounds().withY(465).withHeight(getHeight() - 465); 
 
     g.setGradientFill(juce::ColourGradient(
-        juce::Colour(0xff1c1e1f), 0, 400,  // Era 370, ora 400
+        juce::Colour(0xff1c1e1f), 0, 465,  
         juce::Colour(0xff0f1f4a), 0, getHeight(),
         false));
     g.fillRect(lowerBounds);
@@ -240,21 +236,21 @@ void SubSaverAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
 
     // ═══════════════════════════════════════════════════════════
-    // UPPER SECTION (RED) - 350px
+    // UPPER SECTION (RED)
     // ═══════════════════════════════════════════════════════════
-    auto upperSection = bounds.removeFromTop(350);
+    auto upperSection = bounds.removeFromTop(415);
 
     // TITLE "DISTORTION" in alto
     distortionTitleLabel.setBounds(upperSection.removeFromTop(25).reduced(10, 3));
 
     upperSection.removeFromTop(3);
 
-    // Dry slider (left) - ALLARGATA per evitare ellisse su Mac
+    // Dry slider (left)
     auto dryArea = upperSection.removeFromLeft(70).reduced(8, 15);
     dryLabel.setBounds(dryArea.removeFromBottom(20));
     drySlider.setBounds(dryArea);
 
-    // Wet slider (right) - ALLARGATA per evitare ellisse su Mac
+    // Wet slider (right) 
     auto wetArea = upperSection.removeFromRight(75).reduced(8, 15);
     wetLabel.setBounds(wetArea.removeFromBottom(20));
     wetSlider.setBounds(wetArea);
@@ -290,9 +286,11 @@ void SubSaverAudioProcessorEditor::resized()
     centerArea.removeFromTop(15);
 
     // Distortion Type slider - Margini ridotti per dare spazio al thumb (24px largo)
-    auto sliderArea = centerArea.removeFromTop(80);
+    auto sliderArea = centerArea.removeFromTop(145);
     shapeModeLabel.setBounds(sliderArea.removeFromTop(22));
-    shapeModeSlider.setBounds(sliderArea.reduced(5, 3));
+    shapeModeSlider.setBounds(sliderArea.removeFromTop(38).reduced(5, 3));
+    sliderArea.removeFromTop(5);
+    waveformDisplay.setBounds(sliderArea.reduced(5, 0));
 
     // ═══════════════════════════════════════════════════════════
     // LOGO BAND - skip (Y: 350-400)

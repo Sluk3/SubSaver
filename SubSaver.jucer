@@ -11,6 +11,8 @@
             file="resources/SubSaverLogo.png"/>
     </GROUP>
     <GROUP id="{54B10528-8184-6FE4-1BCE-355F9A88B3CA}" name="GUI">
+      <FILE id="iKbvT4" name="WaveformDisplay.h" compile="0" resource="0"
+            file="Source/WaveformDisplay.h"/>
       <FILE id="GUyEos" name="CustomLookAndFeel.h" compile="0" resource="0"
             file="Source/CustomLookAndFeel.h"/>
       <FILE id="itqYmA" name="PluginEditor.cpp" compile="1" resource="0"

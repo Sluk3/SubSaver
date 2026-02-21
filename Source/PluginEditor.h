@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "CustomLookAndFeel.h"
 #include "BinaryData.h" 
+#include "WaveformDisplay.h"
 
 class SubSaverAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -36,6 +37,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> envAmountAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> shapeModeAttachment;
 
+    WaveformDisplay waveformDisplay;
     // ═══════════════════════════════════════════════════════════
     // LOWER SECTION (BLUE) - Disperser
     // ═══════════════════════════════════════════════════════════

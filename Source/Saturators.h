@@ -170,11 +170,9 @@ public:
             }
         }
     }
-
-private:
     // ═══════════════════════════════════════════════════════════
-    // WAVESHAPING FUNCTIONS (TYPE-SPECIFIC)
-    // ═══════════════════════════════════════════════════════════
+        // WAVESHAPING FUNCTIONS (TYPE-SPECIFIC)
+        // ═══════════════════════════════════════════════════════════
     float applyWaveshaping(float x, float morph)
     {
         // Calcola tutte e 4 le funzioni
@@ -203,6 +201,8 @@ private:
             return shape2 * (1.0f - blend) + shape3 * blend;
         }
     }
+private:
+    
 
 
     // B: Sine Wavefolder (smooth, musical)
@@ -224,7 +224,7 @@ private:
 // ═══════════════════════════════════════════════════════════════
     static float foldback(float x)
     {
-        constexpr float threshold = 0.25f; // Soglia di folding
+        constexpr float threshold = 0.125f; // Soglia di folding
         constexpr float gainComp = 1.0f / threshold; 
 
         // Hard folding (riflessione geometrica)
@@ -250,20 +250,15 @@ private:
     static float triangleWavefolder(float x)
     {
         constexpr float period = 1.0f;
-
-        // Calcola la fase normalizzata
-        float phase = x / period;
-
-        // Applica la formula triangolare
+        float phase = x / period + 0.25f;  // +0.25 allinea la fase con sineFold e foldback
         float folded = 4.0f * std::abs(phase - std::floor(phase + 0.5f)) - 1.0f;
-
         return folded;
     }
+
 
     // ═══════════════════════════════════════════════════════════════
     // A: CHEBYSHEV POLYNOMIAL (3rd order)
     // Formula: T3(x) = 4x³ - 3x
-    // Range ottimale input: [-1, 1]
     // Produce principalmente 3rd harmonic (ottave + quinta)
     // ═══════════════════════════════════════════════════════════════
     static float chebyshevPoly(float x)
