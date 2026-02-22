@@ -258,16 +258,16 @@ private:
 
     // ═══════════════════════════════════════════════════════════════
     // A: CHEBYSHEV POLYNOMIAL (3rd order)
-    // Formula: T3(x) = 4x³ - 3x
+    // Formula: T3(x) = 4x³ - 3x (originale)
+    // noi usiamo -T3(x) = 3x - 4x³ per mantenere la stessa fase della funzione in ingresso
     // Produce principalmente 3rd harmonic (ottave + quinta)
     // ═══════════════════════════════════════════════════════════════
     static float chebyshevPoly(float x)
     {
         // Soft clipping prima di applicare il polinomio per stabilità
         x = std::tanh(x);
-
-        // Chebyshev T3(x) = 4x³ - 3x (genera 3rd harmonic)
-        return 4.0f * x * x * x - 3.0f * x;
+        // Chebyshev modificato -T3(x) = 3x - 4x³
+        return 3.0f * x - 4.0f * x * x * x;
     }
 
     // ═══════════════════════════════════════════════════════════
