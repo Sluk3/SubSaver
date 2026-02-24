@@ -20,8 +20,7 @@ public:
         jassert(sampleRate > 0.0);
         jassert(maxNumSamples > 0);
         jassert(numChannels > 0);
-        jassert(maxDelay > 0);
-
+        jassert(maxDelay >= 0);
         drySignal.setSize(numChannels, maxNumSamples);
         drySignal.clear();
 
@@ -30,8 +29,10 @@ public:
 
         delayBuffer.setSize(numChannels, safeDelaySize);
         delayBuffer.clear();
-
+        delaySamples = maxDelay;
+        
         writePosition = 0;
+
 
         dryLevel.reset(sampleRate, 0.01);
         wetLevel.reset(sampleRate, 0.01);
@@ -190,6 +191,8 @@ public:
         {
             delaySamples = juce::jlimit(0, maxAllowedDelay, samples);
         }
+        delayBuffer.clear();
+        writePosition = 0;
     }
 
 private:

@@ -292,7 +292,7 @@ private:
         oversamplerHigh = std::make_unique<juce::dsp::Oversampling<float>>(
             2,
             static_cast<size_t>(std::log2(oversamplingFactorHigh)),
-            juce::dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR,
+            juce::dsp::Oversampling<float>::FilterType::filterHalfBandFIREquiripple,
             true,
             true
         );
