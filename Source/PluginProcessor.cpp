@@ -35,19 +35,19 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     // ════════════════════════════════════════════════
     // DEBUG: Stampa la latenza calcolata
     // ════════════════════════════════════════════════
-    /*juce::AlertWindow::showMessageBoxAsync(
+    juce::AlertWindow::showMessageBoxAsync(
         juce::AlertWindow::InfoIcon,
         "SubSaver Debug",
         "Total Latency: " + juce::String(totalLatency) + " samples\n" +
         "Latency (ms): " + juce::String(totalLatency / sampleRate * 1000.0, 2) +
         ("Sample Rate: " + juce::String(sampleRate) + " Hz")+
         ("Block Size: " + juce::String(samplesPerBlock) + " samples")+
-        ("Oversampling Latency: " + juce::String(foldback.getLatencySamples()) + " samples")+
+        ("Oversampling Latency: " + juce::String(waveshaper.getLatencySamples()) + " samples")+
         ("Tilt Pre Latency: " + juce::String(tiltFilterPre.getLatencySamples()) + " samples")+
         ("Tilt Post Latency: " + juce::String(tiltFilterPost.getLatencySamples()) + " samples")        
         ,
         "OK"
-    );*/
+    );
     
     // Comunica la latenza all'host
     setLatencySamples(totalLatency);
@@ -109,7 +109,7 @@ int SubSaverAudioProcessor::calculateTotalLatency(double sampleRate)
     latency += tiltFilterPost.getLatencySamples();
 
 	//LATENZA DISPERSER
-	//latency += disperser.getLatencySamples();
+	latency += disperser.getLatencySamples();
     return latency;
 }
 
