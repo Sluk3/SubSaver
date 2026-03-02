@@ -97,7 +97,11 @@ public:
         // Se in transizione → aggiorna alla frequenza NATIVA (non oversampliata)
         // ═══════════════════════════════════════════════════════
         const bool morphIsSmoothing = morphValue.isSmoothing();
+        const bool driveIsSmoothing = drive.isSmoothing();
+        const bool stereoIsSmoothing = stereoWidth.isSmoothing();
         float currentMorphValue = morphIsSmoothing ? 0.0f : morphValue.getCurrentValue();
+        float currentDriveValue = driveIsSmoothing ? 0.0f : drive.getCurrentValue();
+        float currentWidth = stereoIsSmoothing ? 0.0f : stereoWidth.getCurrentValue();
 
         // ═══════════════════════════════════════════════════════
         // OVERSAMPLING UP
@@ -119,14 +123,18 @@ public:
             if (morphIsSmoothing && (sample % activeFactor == 0))
                 currentMorphValue = morphValue.getNextValue();
 
+            if (driveIsSmoothing && (sample % activeFactor == 0))
+                currentDriveValue = drive.getNextValue();
+
+            if (stereoIsSmoothing && (sample % activeFactor == 0))
+                currentWidth = stereoWidth.getNextValue();
+
             // Map sample index to native rate envelope
             size_t nativeIndex = sample / activeFactor;
             if (nativeIndex >= envelopeBuffer.getNumSamples())
                 nativeIndex = envelopeBuffer.getNumSamples() - 1;
 
             float env = envData[nativeIndex] + 1.0f; // envelope modulation (1-2)
-            float currentWidth = stereoWidth.getNextValue();
-            float driveValue = drive.getNextValue();
 
             // Stereo bias
             float biasL = currentWidth * (-0.5f);
@@ -139,7 +147,7 @@ public:
                 float input = dataPtr[sample];
 
                 // 1. Apply drive
-                float driven = input * driveValue;
+                float driven = input * currentDriveValue;
 
                 // 2. Add stereo bias
                 driven += (ch == 0) ? biasL : biasR;
