@@ -26,11 +26,11 @@ public:
         : drive(defaultDrive),
         stereoWidth(defaultStereoWidth),
         oversampling(defaultOversampling),
-        morphValue(0.0f)
+        morphValue(Parameters::defaultMorph)
     {
         drive.setCurrentAndTargetValue(defaultDrive);
         stereoWidth.setCurrentAndTargetValue(defaultStereoWidth);
-        morphValue.setCurrentAndTargetValue(0.0f);
+        morphValue.setCurrentAndTargetValue(Parameters::defaultMorph);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -109,9 +109,9 @@ public:
         const bool morphIsSmoothing = morphValue.isSmoothing();
         const bool driveIsSmoothing = drive.isSmoothing();
         const bool stereoIsSmoothing = stereoWidth.isSmoothing();
-        float currentMorphValue = morphIsSmoothing ? 0.0f : morphValue.getCurrentValue();
-        float currentDriveValue = driveIsSmoothing ? 0.0f : drive.getCurrentValue();
-        float currentWidth = stereoIsSmoothing ? 0.0f : stereoWidth.getCurrentValue();
+        double currentMorphValue = morphIsSmoothing ? 0.0f : morphValue.getCurrentValue();
+        double currentDriveValue = driveIsSmoothing ? 0.0f : drive.getCurrentValue();
+        double currentWidth = stereoIsSmoothing ? 0.0f : stereoWidth.getCurrentValue();
 
         // ═══════════════════════════════════════════════════════
         // OVERSAMPLING UP
