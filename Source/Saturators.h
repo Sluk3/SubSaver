@@ -84,6 +84,16 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer,
         const juce::AudioBuffer<double>& envelopeBuffer)
     {
+        // SAFETY GUARD: se il blocco supera il max inizializzato, reinizializza
+        // gli oversampler per evitare out-of-bounds nei buffer interni.
+        // Può accadere con host che variano la block size a runtime (es. DAW craccati,
+        // o host che usano buffer diversi da quelli dichiarati in prepareToPlay).
+        if (buffer.getNumSamples() > maxSamplesPerBlock)
+        {
+            maxSamplesPerBlock = buffer.getNumSamples();
+            initOversamplers(maxSamplesPerBlock);
+        }
+
         auto* activeOversampler = oversampling ? oversamplerHigh.get() : oversamplerBypass.get();
         const int activeFactor = oversampling ? oversamplingFactorHigh : 1;
 
@@ -219,7 +229,7 @@ private:
 // 
 // Implementazione: 
 //   foldback(x, thresh) = thresh - |x - thresh| se x > thresh
-//                       = -thresh + |x + thresh| se x < -thresh
+//                       = -threshold + |x + threshold| se x < -threshold
 //                       = x altrimenti
 // ═══════════════════════════════════════════════════════════════
     static float foldback(float x)
