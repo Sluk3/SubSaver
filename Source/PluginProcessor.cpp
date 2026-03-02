@@ -31,27 +31,17 @@ void SubSaverAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     envelopeBuffer.setSize(1, samplesPerBlock);
     modulatedDriveBuffer.setSize(1, samplesPerBlock);
 	disperser.prepareToPlay(sampleRate, samplesPerBlock);
-    int totalLatency = calculateTotalLatency(sampleRate);
-    // ════════════════════════════════════════════════
-    // DEBUG: Stampa la latenza calcolata
-    // ════════════════════════════════════════════════
-    juce::AlertWindow::showMessageBoxAsync(
-        juce::AlertWindow::InfoIcon,
-        "SubSaver Debug",
-        "Total Latency: " + juce::String(totalLatency) + " samples\n" +
-        "Latency (ms): " + juce::String(totalLatency / sampleRate * 1000.0, 2) +
-        ("Sample Rate: " + juce::String(sampleRate) + " Hz")+
-        ("Block Size: " + juce::String(samplesPerBlock) + " samples")+
-        ("Oversampling Latency: " + juce::String(waveshaper.getLatencySamples()) + " samples")+
-        ("Tilt Pre Latency: " + juce::String(tiltFilterPre.getLatencySamples()) + " samples")+
-        ("Tilt Post Latency: " + juce::String(tiltFilterPost.getLatencySamples()) + " samples")        
-        ,
-        "OK"
-    );
-    
-    // Comunica la latenza all'host
+
+    const int totalLatency = calculateTotalLatency(sampleRate);
     setLatencySamples(totalLatency);
     dryWetter.prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), totalLatency);
+
+#if JUCE_DEBUG
+    juce::MessageManager::callAsync([totalLatency, sampleRate]()
+    {
+        DBG("SubSaver latency: " + juce::String(totalLatency) + " samples @ " + juce::String(sampleRate) + " Hz");
+    });
+#endif
 }
 
 void SubSaverAudioProcessor::releaseResources()
