@@ -136,13 +136,20 @@ public:
             float thumbPos = sliderPos;
             float fillHeight = height - (thumbPos - y);
 
-            // Glow interno minimo
-            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.2f));
-            g.fillRoundedRectangle(trackX - 1, thumbPos, trackWidth + 2, fillHeight, (trackWidth + 2) * 0.5f);
+            // Guard: disegna il fill solo se la dimensione e' positiva
+            if (fillHeight > 0.0f)
+            {
+                // Glow interno minimo
+                g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.2f));
+                g.fillRoundedRectangle(trackX - 1, thumbPos, trackWidth + 2, fillHeight, (trackWidth + 2) * 0.5f);
+            }
 
-            // Filled portion main
-            g.setColour(juce::Colour(0xfff02f2f));
-            g.fillRoundedRectangle(trackX + 2, thumbPos, trackWidth - 4, fillHeight - 2, (trackWidth - 4) * 0.5f);
+            if (fillHeight > 2.0f)
+            {
+                // Filled portion main
+                g.setColour(juce::Colour(0xfff02f2f));
+                g.fillRoundedRectangle(trackX + 2, thumbPos, trackWidth - 4, fillHeight - 2.0f, (trackWidth - 4) * 0.5f);
+            }
 
             // Thumb con glow minimo
             g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.12f));
@@ -189,11 +196,18 @@ public:
             // Filled portion
             float fillWidth = sliderPos - x;
 
-            g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.2f));
-            g.fillRoundedRectangle(x, trackY - 1, fillWidth, trackHeight + 2, (trackHeight + 2) * 0.5f);
+            // Guard: disegna il fill solo se la dimensione e' positiva
+            if (fillWidth > 0.0f)
+            {
+                g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.2f));
+                g.fillRoundedRectangle(x, trackY - 1, fillWidth, trackHeight + 2, (trackHeight + 2) * 0.5f);
+            }
 
-            g.setColour(juce::Colour(0xfff02f2f));
-            g.fillRoundedRectangle(x + 2, trackY + 2, fillWidth - 2, trackHeight - 4, (trackHeight - 4) * 0.5f);
+            if (fillWidth > 2.0f)
+            {
+                g.setColour(juce::Colour(0xfff02f2f));
+                g.fillRoundedRectangle(x + 2, trackY + 2, fillWidth - 2.0f, trackHeight - 4, (trackHeight - 4) * 0.5f);
+            }
 
             // Thumb glow minimo
             g.setColour(juce::Colour(0xfff02f2f).withAlpha(0.12f));
