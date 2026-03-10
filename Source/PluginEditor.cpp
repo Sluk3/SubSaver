@@ -176,7 +176,6 @@ SubSaverAudioProcessorEditor::SubSaverAudioProcessorEditor(SubSaverAudioProcesso
 SubSaverAudioProcessorEditor::~SubSaverAudioProcessorEditor()
 {
     setLookAndFeel(nullptr);
-    logoImage = juce::ImageCache::getFromMemory(BinaryData::SubSaverLogo_png, BinaryData::SubSaverLogo_pngSize);
 }
 
 void SubSaverAudioProcessorEditor::paint(juce::Graphics& g)

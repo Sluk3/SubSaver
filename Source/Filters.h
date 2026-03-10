@@ -38,7 +38,6 @@ public:
     {
         sampleRate = sr;
         tiltAmount.reset(sr, 0.005);
-        tiltAmount.setCurrentAndTargetValue(Parameters::defaultTilt);
         lastTiltAmount = tiltAmount.getCurrentValue();
 
         juce::dsp::ProcessSpec spec;
@@ -63,7 +62,7 @@ public:
     void setPivotFrequency(float freqHz)
     {
         pivotFrequency = juce::jlimit(100.0f, 10000.0f, freqHz);
-        updateCoefficients();
+        updateCoefficients(tiltAmount.getCurrentValue());
     }
 
     void reset()
@@ -86,7 +85,7 @@ public:
             if (std::abs(currentTilt - lastTiltAmount) > 0.001f)
             {
                 tiltAmount = currentTilt;
-                updateCoefficients();
+                updateCoefficients(currentTilt);
                 lastTiltAmount = currentTilt;
             }
 
@@ -109,9 +108,8 @@ public:
     }
 
 private:
-    void updateCoefficients()
+    void updateCoefficients(float currentTilt)
     {
-        float currentTilt = tiltAmount.getNextValue();
 
         float lowGain = juce::Decibels::decibelsToGain(currentTilt);
         float highGain = juce::Decibels::decibelsToGain(-currentTilt);
