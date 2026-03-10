@@ -84,7 +84,6 @@ public:
 
             if (std::abs(currentTilt - lastTiltAmount) > 0.001f)
             {
-                tiltAmount = currentTilt;
                 updateCoefficients(currentTilt);
                 lastTiltAmount = currentTilt;
             }
